@@ -4,9 +4,30 @@ Turns any video into a readable digest: a timestamped contact sheet, individual 
 transcript grouped under the frame each line was spoken over. Claude can't play video — this
 gives it something it can actually read.
 
-![Example contact sheet](docs/example-contact-sheet.jpg)
-_Nine frames from a 33-second public-domain clip ([Big Buck Bunny](https://www.bigbuckbunny.org),
-CC BY 3.0), each labelled with its approximate timestamp._
+![Example contact sheet](docs/example-output/visual/contact-sheet.jpg)
+_Ten frames from a 33-second public-domain clip ([Big Buck Bunny](https://www.bigbuckbunny.org),
+CC BY 3.0), each labelled with its approximate timestamp. This clip has no narration — for the
+transcript half, here's a real one, grouped under the frame each line was spoken over:_
+
+```
+frame_001.jpg  [0:00 - 0:05]
+    (0:00) Now look into space to the moon and to the planets beyond, and we have vowed that we shall
+
+frame_002.jpg  [0:05 - 0:09]
+    (0:08) not see it governed by a hostile flag of conquest, but by a banner of freedom and peace.
+
+frame_003.jpg  [0:09 - 0:13]
+    —
+
+frame_005.jpg  [0:17 - 0:21]
+    (0:17) We have vowed that we shall not see space filled with weapons of mass destruction, but
+```
+
+_(From a 25-second clip narrated with a public-domain speech — JFK, Rice University, 1962.
+`—` marks a frame nobody spoke over.)_
+
+Full, unedited output from both runs — every frame, the complete transcript, `meta.json` — is in
+[`docs/example-output/`](docs/example-output/).
 
 ## What this does that the existing video-watching tools don't
 

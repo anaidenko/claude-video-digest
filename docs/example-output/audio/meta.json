@@ -1,0 +1,17 @@
+{
+  "id": "demo-narrated",
+  "source_url": "",
+  "resolved_url": "",
+  "extractor": "local",
+  "recorded": "2026-08-12",
+  "recorded_source": "today-fallback",
+  "duration_sec": 25.0,
+  "frames": 7,
+  "frame_interval_sec": 3.57,
+  "sampled_fps": 2.0,
+  "deduped": true,
+  "frames_before_thinning": 25,
+  "timestamps_approximate": true,
+  "transcript": "written (-15.8 dB)",
+  "source_video": "kept (auto: persistent output dir)"
+}

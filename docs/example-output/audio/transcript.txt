@@ -1,0 +1,29 @@
+Transcript grouped by frame.
+Each block covers the time that frame was on screen; a segment is filed
+under the frame it STARTS in, so sentences stay whole.
+
+frame_001.jpg  [0:00 - 0:05]
+    (0:00) Now look into space to the moon and to the planets beyond, and we have vowed that we shall
+
+frame_002.jpg  [0:05 - 0:09]
+    (0:08) not see it governed by a hostile flag of conquest, but by a banner of freedom and peace.
+
+frame_003.jpg  [0:09 - 0:13]
+    —
+
+frame_004.jpg  [0:13 - 0:17]
+    —
+
+frame_005.jpg  [0:17 - 0:21]
+    (0:17) We have vowed that we shall not see space filled with weapons of mass destruction, but
+
+frame_006.jpg  [0:21 - 0:24]
+    —
+
+frame_007.jpg  [0:24 - 0:25]
+    —
+
+============================================================
+Full transcript, unbroken:
+
+Now look into space to the moon and to the planets beyond, and we have vowed that we shall not see it governed by a hostile flag of conquest, but by a banner of freedom and peace. We have vowed that we shall not see space filled with weapons of mass destruction, but

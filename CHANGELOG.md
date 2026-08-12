@@ -2,7 +2,7 @@
 
 Notable changes per release. Dates are UTC.
 
-## [Unreleased]
+## [0.2.0] — 2026-08-12
 
 ### Added
 
@@ -11,6 +11,10 @@ Notable changes per release. Dates are UTC.
   video extension. Droplr serves `cdn-std.droplr.net/files/acc_NNN/<id>` — no extension at all —
   so every extension-based pattern missed it, and yt-dlp doesn't support the host either. This
   also makes the scraper work on any host that advertises its video through Open Graph.
+  ⚠️ Previous releases described Droplr as "expected to work, unverified" on the reasoning that
+  its pages had the same shape as Zight's. They don't, and it didn't — running it is what
+  established that.
+- `CHANGELOG.md`, `CONTRIBUTING.md`, `package.json`, and GitHub issue templates.
 
 ### Changed
 
@@ -19,6 +23,12 @@ Notable changes per release. Dates are UTC.
 - `docs/example-output/` now carries real output from two runs — a contact sheet from a clip
   with no narration, and a frame-grouped transcript from a narrated one — since a single
   screenshot only demonstrated half of what the tool does.
+
+### Note on 0.1.1
+
+`plugin.json` was not bumped for 0.1.1, so plugin installs never saw it — its fixes reach users
+with this release instead. The version in `.claude-plugin/plugin.json` is the single source of
+truth for the plugin cache; a tag alone doesn't deliver anything.
 
 ## [0.1.1] — 2026-08-12
 
@@ -69,6 +79,6 @@ Initial release.
 - `doctor` subcommand reporting required and optional dependencies.
 - `Dockerfile` for Linux and machines without macOS.
 
-[Unreleased]: https://github.com/anaidenko/claude-video-digest/compare/v0.1.1...HEAD
+[0.2.0]: https://github.com/anaidenko/claude-video-digest/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/anaidenko/claude-video-digest/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/anaidenko/claude-video-digest/releases/tag/v0.1.0

@@ -51,6 +51,19 @@ downscale hides a detail.
 - **The default frame count is a starting point, not a limit.** When the sheet doesn't settle
   the question, re-run with a higher `--max-frames` and say what was ambiguous. Do this before
   handing anything back to the user.
+- **A sequence where a count changes (items deleted, created, or reordered) needs dense
+  re-extraction before any conclusion goes into a report.** The default budget is tuned for
+  "what is this clip about", not "what exactly happened, in what order". A real triage session
+  read a sparse sheet as "a deleted item reappeared" — re-extracted at a much higher
+  `--max-frames`, the same clip showed something else entirely (a second, different item was
+  deleted; a transient loading state the sparse sheet had skipped explained the miscount). The
+  wrong conclusion had already been written into a report before the density was raised. Treat
+  any story involving a count as provisional until checked at higher density, not just when the
+  sheet already looks ambiguous.
+- **Dedupe can drop the exact frame that explains a discrepancy.** It keeps visually distinct
+  frames, but a brief loading/transient state can look similar enough to the frame before or
+  after it to get dropped. If a count or an order doesn't add up, re-run with `--no-dedupe` in
+  addition to a higher `--max-frames`.
 - **A missing `transcript.txt` usually means silence, not failure.** Screen recorders often
   write an empty audio track when the mic is off; the tool measures loudness and skips
   transcription below a threshold. The summary line says which happened.

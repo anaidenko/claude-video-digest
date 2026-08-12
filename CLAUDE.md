@@ -78,6 +78,25 @@ half-populated directory and an error that names the symptom, not the cause.
   run. Fixed the same way as the other scratch dirs: tracked in a variable, removed in
   `cleanup()`. A comment describing cleanup that hasn't been wired up reads exactly like real
   cleanup on a skim.
+- **An explicit `--max-frames` was silently ignored on short clips.** The auto-derived budget
+  is clamped by `MIN_INTERVAL` (so it never asks for more frames than the clip has distinct
+  seconds), and that same clamp used to apply even when the caller had explicitly overridden
+  the budget — so `--max-frames 40` on a 13.7s clip still produced 14 frames, with no error and
+  no indication the flag hadn't been honoured. **Real cost, not theoretical**: a triage session
+  read a sparse sheet, missed a transient frame the clamp had quietly excluded from even the
+  explicit request, and wrote a wrong conclusion into a report before re-extracting denser and
+  finding the real explanation. Fixed by skipping the clamp entirely when `MAX_FRAMES` is set —
+  an explicit ask beats a heuristic. Verified in both directions: 40 with the flag (now yields
+  up to 40), unchanged with no flag (negative control).
+- **`--force` and re-extraction are two different things, and conflating them wastes a
+  re-download.** A prior version of this tool (the one this was extracted from) tied
+  re-extraction to `--force`, which also re-downloads — so trying a higher `--max-frames` on an
+  already-cached clip meant re-fetching an unchanged video just to get denser frames. **Not a
+  bug here**: this script's cache-hit branch only ever sets `SOURCE_MP4`; frame extraction runs
+  unconditionally afterward using whatever parameters were passed on *this* invocation,
+  regardless of whether the download was fresh or reused. Verified: `--max-frames 10` then
+  `--max-frames 40` on the same cached clip correctly produced 11 then 28 frames, no `--force`
+  needed. Recorded here so nobody "fixes" this into the other tool's behaviour by mistake.
 
 ## Security notes
 

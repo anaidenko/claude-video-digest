@@ -598,8 +598,17 @@ else
         print n
     }')"
 fi
-by_interval="$(awk -v d="$DURATION" -v m="$MIN_INTERVAL" 'BEGIN{v=int(d/m); print (v<1?1:v)}')"
-[ "$by_interval" -lt "$BUDGET" ] && BUDGET="$by_interval"
+# The min-interval clamp keeps auto-derived budgets from asking for more frames
+# than the clip has distinct seconds. An explicit --max-frames is a deliberate
+# request for denser coverage — usually to inspect a fast interaction frame by
+# frame — so it wins over the heuristic; otherwise a short clip silently
+# ignores the flag. Found in real triage use: --max-frames 40 on a 13.7s clip
+# produced only 14 frames, and the missing frames were exactly the ones that
+# would have shown what actually happened (see CLAUDE.md).
+if [ -z "$MAX_FRAMES" ]; then
+    by_interval="$(awk -v d="$DURATION" -v m="$MIN_INTERVAL" 'BEGIN{v=int(d/m); print (v<1?1:v)}')"
+    [ "$by_interval" -lt "$BUDGET" ] && BUDGET="$by_interval"
+fi
 [ "$RAW_COUNT" -lt "$BUDGET" ] && BUDGET="$RAW_COUNT"
 
 # Both ends are pinned. The FIRST frame is the starting state; the LAST is the

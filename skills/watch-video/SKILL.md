@@ -84,15 +84,24 @@ downscale hides a detail.
   enough. It exists only for a URL input — a local file has no url to record.
 - Frames answer _what happened on screen_. They do not prove _why_ — confirm the mechanism
   elsewhere before reporting a cause.
-- **End the answer with where the output landed.** The script's last lines print the output
-  directory and the paths to `contact-sheet.jpg`, `frames/`, `transcript.txt` and `source.url`
-  — pass those through. A summary with no paths leaves the user unable to open the sheet, check
-  a frame you described, or reach the original recording, and they have to ask. One short
-  closing block is enough:
+- **End the answer with where the output landed, one markdown link per line.** The script's
+  last lines print the output directory and the paths to `contact-sheet.jpg`, `frames/`,
+  `transcript.txt`, `source.url` and `meta.json` — pass those through as
+  `[label](file:///abs/path)` so the host can render them clickable; a bare path string is
+  inert in most chat UIs. **One link per line, not `·`-joined on one line** — several
+  markdown links crammed together render as a
+  cluttered run-on, each expanding inline. A summary with no paths leaves the user unable to
+  open the sheet, check a frame you described, or reach the original recording, and they have
+  to ask. A short closing list is enough:
 
 <pre>
-Output: /path/to/&lt;run-dir&gt;
-  contact-sheet.jpg · frames/ (N) · transcript.txt · source.url
+Output: [<run-dir>](file:///path/to/&lt;run-dir&gt;)
+- [contact-sheet.jpg](file:///path/.../contact-sheet.jpg)
+- [frames/](file:///path/.../frames/) (N)
+- [transcript.txt](file:///path/.../transcript.txt) — only when the audio had signal; omit
+  this line entirely when it wasn't written, don't link a file that doesn't exist
+- [source.url](file:///path/.../source.url)
+- [meta.json](file:///path/.../meta.json)
 </pre>
 
 ## Dependencies

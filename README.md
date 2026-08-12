@@ -91,6 +91,30 @@ dependency fails immediately** with an install hint (`brew install ffmpeg` / `ap
 ffmpeg`) — before any download or extraction runs, so a broken environment never produces a
 half-written output directory.
 
+### Update
+
+```bash
+claude plugin marketplace update anaidenko
+claude plugin update claude-video-digest@anaidenko
+```
+
+Both steps matter: the first refreshes the cached marketplace listing from GitHub (skip it and
+the second command still sees the old version); the second needs the `@anaidenko` suffix — the
+bare plugin name fails with "not found" even though it's installed. `claude plugin list` shows
+the new version right away, but the CLI itself says **restart to apply** — the running session
+keeps the old code until you do.
+
+### Uninstall
+
+```bash
+claude plugin uninstall claude-video-digest
+claude plugin marketplace remove anaidenko
+```
+
+The second line is optional — only needed if you also want to stop tracking this marketplace
+(e.g. before switching to the project-level install below, or if you registered it from a local
+path by mistake and want to re-add it from GitHub).
+
 ### For a team — install with the project, not per developer
 
 Commit this to the repo's `.claude/settings.json` and everyone who clones it gets the plugin,

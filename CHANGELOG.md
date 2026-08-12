@@ -2,6 +2,23 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.1.0] — 2026-08-12
+
+### Added
+
+- **README: Update and Uninstall sections.** Verified live: `claude plugin update <name>` fails
+  with "not found" even when installed — the `@marketplace` suffix is required, and
+  `marketplace update` has to run first or the version check uses a stale cache.
+
+### Changed
+
+- **The skill's closing summary now links its output files instead of naming them as bare
+  text.** `contact-sheet.jpg`, `frames/`, `transcript.txt`, `source.url` and `meta.json` are
+  each rendered as `[label](file:///abs/path)`, one per line — a bare path is inert in most
+  chat hosts, and several links joined by `·` on one line render as a cluttered run-on. The
+  `transcript.txt` line is omitted entirely (not linked to a missing file) when the run
+  produced no transcript.
+
 ## [1.0.0] — 2026-08-12
 
 First stable release: the tool is now covered by a test suite on two platforms, and the plugin

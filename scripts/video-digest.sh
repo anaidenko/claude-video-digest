@@ -424,11 +424,23 @@ else
 
         CDN_URL=""
         if [ "$fetched" -eq 1 ]; then
-            # The viewer variant (Zight-family) is the plain playable file;
-            # fall back to any embedded mp4 on the page.
+            # 1. The viewer variant (Zight-family) is the plain playable file.
             CDN_URL="$(command grep -oE 'https?://[^"'"'"']+\.mp4[^"'"'"']*' "$page" \
                 | command grep 'source=viewer' | head -1 || true)"
+            # 2. Any URL on the page that ends in a video extension.
             [ -n "$CDN_URL" ] || CDN_URL="$(command grep -oE 'https?://[^"'"'"']+\.mp4[^"'"'"']*' "$page" | head -1 || true)"
+            # 3. og:video / twitter:player meta tags. ⚠️ Load-bearing for hosts
+            # whose CDN URL carries NO file extension — Droplr serves
+            # `cdn-std.droplr.net/files/acc_NNN/<id>` (verified: 200,
+            # content-type video/mp4), which the extension-based patterns above
+            # cannot match at all. Without this branch a Droplr link falls
+            # through to yt-dlp, which does not support the host either, and
+            # the run dies despite the video being one meta tag away.
+            if [ -z "$CDN_URL" ]; then
+                CDN_URL="$(command grep -oiE '<meta[^>]+(property|name)="(og:video(:secure_url|:url)?|twitter:player:stream)"[^>]*>' "$page" \
+                    | command grep -oE 'content="[^"]+"' | head -1 \
+                    | sed -e 's/^content="//' -e 's/"$//' || true)"
+            fi
         fi
 
         if [ -n "$CDN_URL" ]; then

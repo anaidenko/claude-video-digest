@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+    - name: A share host that isn't recognised
+      url: https://github.com/anaidenko/claude-video-digest/blob/main/CONTRIBUTING.md#where-help-is-most-useful
+      about: Zight, CloudApp and Droplr are verified. Adding a host needs a live link or the page's og:video meta tags — CONTRIBUTING says what to send.
+    - name: Windows support
+      url: https://github.com/anaidenko/claude-video-digest/blob/main/CONTRIBUTING.md#where-help-is-most-useful
+      about: Untested rather than unsupported — it's a bash script, so it needs WSL or Git Bash. A report either way is useful.

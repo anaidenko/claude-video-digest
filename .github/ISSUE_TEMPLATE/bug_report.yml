@@ -1,0 +1,75 @@
+name: Bug report
+description: A video wouldn't process, or the output was wrong
+labels: [bug]
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Most failures here are one of three things: a dependency that isn't
+              installed, a share host whose page shape isn't recognised, or an
+              extraction that produced fewer frames than you expected. The
+              `doctor` output below settles the first one immediately.
+
+    - type: textarea
+      id: what-happened
+      attributes:
+          label: What happened
+          description: What you expected, and what you got instead.
+          placeholder: |
+              Expected a contact sheet from a Loom link.
+              Got "no video found on <url>, and yt-dlp is not installed".
+      validations:
+          required: true
+
+    - type: textarea
+      id: command
+      attributes:
+          label: The command you ran
+          description: Including flags. Replace a private URL with the host name if you'd rather not share it.
+          render: shell
+          placeholder: ./scripts/video-digest.sh https://example.com/share/abc --max-frames 20
+      validations:
+          required: true
+
+    - type: textarea
+      id: doctor
+      attributes:
+          label: "`doctor` output"
+          description: Run `./scripts/video-digest.sh doctor` and paste the whole thing.
+          render: shell
+      validations:
+          required: true
+
+    - type: dropdown
+      id: platform
+      attributes:
+          label: Platform
+          options:
+              - macOS
+              - Linux (native)
+              - Linux (the included Dockerfile)
+              - Windows (WSL or Git Bash)
+              - Other
+      validations:
+          required: true
+
+    - type: textarea
+      id: meta
+      attributes:
+          label: "`meta.json`, if a run completed"
+          description: |
+              From the output directory. Useful when the run *succeeded* but the
+              result was wrong — it records the frame counts, the measured
+              loudness, and which extractor was used.
+          render: json
+
+    - type: markdown
+      attributes:
+          value: |
+              **If this is about a share host that isn't recognised**, the single
+              most useful thing you can add is the page's `<meta>` tags — the
+              scraper looks for an embedded video URL or an `og:video` tag:
+
+              ```bash
+              curl -sSL "<the share url>" | grep -oiE '<meta[^>]*(og:video|twitter:player)[^>]*>'
+              ```

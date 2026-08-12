@@ -1,0 +1,20 @@
+{
+    "name": "claude-video-digest",
+    "description": "Turns any video into a readable digest — a timestamped contact sheet, individual frames, and a transcript grouped under the frame each line was spoken over.",
+    "private": true,
+    "//": "No version field on purpose: .claude-plugin/plugin.json is the single source of truth, and a second copy here would drift.",
+    "license": "MIT",
+    "author": "Andrii Naidenko",
+    "homepage": "https://github.com/anaidenko/claude-video-digest",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/anaidenko/claude-video-digest.git"
+    },
+    "scripts": {
+        "doctor": "./scripts/video-digest.sh doctor",
+        "lint": "command -v shellcheck >/dev/null || { echo 'shellcheck not installed: brew install shellcheck'; exit 1; }; shellcheck scripts/video-digest.sh",
+        "lint:py": "python3 -m py_compile scripts/lib/*.py",
+        "docker:build": "docker build -t video-digest .",
+        "docker:doctor": "docker run --rm video-digest doctor"
+    }
+}

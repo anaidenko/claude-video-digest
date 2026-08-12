@@ -132,8 +132,18 @@ half-populated directory and an error that names the symptom, not the cause.
 
 ## Known gap
 
-**Droplr is unverified.** The extractor chain scrapes for an embedded `.mp4` on the page, which
-is confirmed working for Zight and CloudApp; Droplr is architecturally the same shape (a `d.pr`
-short link resolving to an embedded-video page) but no live Droplr link was available to test
-against while building this. Don't upgrade README's "expected, unverified" wording to a plain
-claim of support without actually running it against one.
+**Droplr is verified** — but it needed a code change, and the reason generalises.
+
+The original extractor only matched URLs ending in a video extension, which was enough for
+Zight/CloudApp. Droplr's page embeds **no such URL at all**: the video lives in an `og:video`
+meta tag pointing at `cdn-std.droplr.net/files/acc_NNN/<id>` — no extension, so every
+extension-based pattern misses it, and yt-dlp doesn't support the host either, so the run died
+with "Unsupported URL" despite the video being one meta tag away.
+
+Fixed by falling back to `og:video` / `og:video:secure_url` / `twitter:player:stream` meta tags
+when no extension-matched URL is found. Verified against three separate live `d.pr/v/` links.
+
+⚠️ **The lesson: "same shape, should work" was wrong, and only running it showed that.** Before
+this, both README and this file said Droplr was "expected to work — same page shape as Zight".
+The page shape was similar; the URL shape was not. If another host is ever added to the claimed
+list, run it, don't reason about it.

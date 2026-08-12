@@ -1,0 +1,15 @@
+{
+    "name": "anaidenko",
+    "description": "Claude Code plugins by Andrii Naidenko.",
+    "owner": {
+        "name": "Andrii Naidenko",
+        "url": "https://github.com/anaidenko"
+    },
+    "plugins": [
+        {
+            "name": "claude-video-digest",
+            "source": "./",
+            "description": "Turns any video into a readable digest — timestamped contact sheet, frame-grouped transcript, no hallucinated captions on silent tracks."
+        }
+    ]
+}

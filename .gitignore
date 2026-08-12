@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+/tmp-media/
+/out/
+.DS_Store

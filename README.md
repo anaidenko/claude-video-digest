@@ -4,10 +4,13 @@ Turns any video into a readable digest: a timestamped contact sheet, individual 
 transcript grouped under the frame each line was spoken over. Claude can't play video — this
 gives it something it can actually read.
 
-![Example contact sheet](docs/example-output/visual/contact-sheet.jpg)
+![Example contact sheet](docs/hero-contact-sheet.jpg)
 
-_Ten frames from a 33-second public-domain clip ([Big Buck Bunny](https://www.bigbuckbunny.org),
-CC BY 3.0). That clip has no narration; here's the transcript half, from a narrated one:_
+_Ten frames from a 33-second clip ([Big Buck Bunny](https://www.bigbuckbunny.org), CC BY 3.0),
+each tile timestamped._
+
+When the audio carries speech, the transcript arrives grouped under the frame each line was
+spoken over — `—` marks a frame nobody spoke over:
 
 ```
 frame_001.jpg  [0:00 - 0:05]
@@ -20,7 +23,7 @@ frame_005.jpg  [0:17 - 0:21]
     (0:17) We have vowed that we shall not see space filled with weapons of mass destruction, but
 ```
 
-Full output from both runs — every frame, complete transcript, `meta.json` — in
+A complete run — sheet, every frame, transcript, `meta.json` — is in
 [`docs/example-output/`](docs/example-output/).
 
 ## Use
@@ -69,26 +72,29 @@ source.mp4          kept or deleted depending on keepSource
 
 ## Install
 
-As a Claude Code plugin:
-
-```
-/plugin marketplace add anaidenko/claude-video-digest
-/plugin install claude-video-digest
-```
-
-Or standalone — it's a bash script with no plugin-specific dependency:
-
 ```bash
-git clone https://github.com/anaidenko/claude-video-digest.git
-./claude-video-digest/scripts/video-digest.sh <url-or-file>
+claude plugin marketplace add anaidenko/claude-video-digest
+claude plugin install claude-video-digest
 ```
 
-**Required:** `ffmpeg`, `ffprobe`, `python3`. **Optional:** `curl` (URL inputs), `whisper`
-(transcription — skipped, not an error, without it), `yt-dlp` (YouTube, Loom, Vimeo and
-hundreds more). `doctor` tells you what you're missing.
+**Required:**
+- `ffmpeg`, `ffprobe` — frame extraction and the contact sheet
+- `python3` — reads the config, writes `meta.json`, groups the transcript
 
-**Platforms:** macOS and Linux, both verified. Windows untested — expected to work under
-Docker Desktop / WSL2, but not claimed until someone confirms it. A `Dockerfile` is included:
+**Optional** (each degrades cleanly rather than failing the run):
+- `curl` — needed only for a URL input; a local file works without it
+- `whisper` — transcription; missing it means no `transcript.txt`, not an error
+- `yt-dlp` — sites beyond the built-in scraper (Loom, YouTube, Vimeo, hundreds more)
+
+Run `./scripts/video-digest.sh doctor` to see exactly what's present. **Missing a required
+dependency fails immediately** with an install hint (`brew install ffmpeg` / `apt-get install
+ffmpeg`) — before any download or extraction runs, so a broken environment never produces a
+half-written output directory.
+
+**Platforms:** macOS and Linux, both covered by the test suite (`npm test` for macOS's bash 3.2,
+`npm run test:docker` for Debian's bash 5.x — both currently 47-48 assertions, green). Windows
+untested — expected to work under Docker Desktop / WSL2, but not claimed until someone confirms
+it. A `Dockerfile` is included:
 
 ```bash
 docker build -t video-digest .
@@ -97,25 +103,40 @@ docker run --rm -v "$PWD:/work" -w /work video-digest <input> --output /work/out
 
 ## Configuration
 
-Defaults work with no config. To change them: `.video-digest.json` in the working directory, or
-`~/.config/video-digest/config.json`. CLI flags win over both.
+Defaults work with no config. Exactly one config file is read, first match wins — it's a
+choice, not a merge:
 
-| Key | Default | What it does |
-| --- | --- | --- |
-| `output` | OS temp dir | where recordings are written |
-| `maxFrames` | derived from duration | hard cap on frame count |
-| `secondsPerFrame` | `4.5` | sampling density before floor/ceiling |
-| `framesFloor` / `framesCeiling` | `10` / `30` | bounds on the derived count |
-| `minInterval` | `1` | minimum seconds between kept frames |
-| `sampleFps` | `2` | pre-dedupe sampling rate |
-| `dedupe` | `true` | drop near-identical frames rather than sampling evenly |
-| `contactSheet` / `frames` | `true` | produce the sheet / write frame files |
-| `transcript` | `"auto"` | `auto` gates on measured loudness; `always`; `never` |
-| `keepSource` | `"auto"` | `auto` deletes in a temp dir, keeps in a persistent one |
-| `silenceFloorDb` | `-60` | threshold for the `auto` transcript gate |
-| `cellArea` | `480000` | contact-sheet cell size budget, in pixels² |
-| `jpegQuality` | `2` | ffmpeg `-q:v` for the sheet |
-| `whisperModel` | `"base"` | Whisper model size |
+1. `--config <path>`, if given
+2. `.video-digest.json` in the current working directory
+3. `~/.config/video-digest/config.json`
+
+CLI flags always win over whichever file was picked.
+
+**"Current working directory" means the shell's `$PWD` when the script runs** — for the bundled
+skill, that's wherever your Claude Code session is working, which varies run to run. Because a
+project-local `.video-digest.json` fully shadows the `~/.config/` file rather than layering on
+top of it, put settings you want to apply everywhere in `~/.config/video-digest/config.json`,
+and only add a per-directory `.video-digest.json` when a specific project needs a different
+full set of overrides.
+
+| Key | Default | Example | What it does |
+| --- | --- | --- | --- |
+| `output` | OS temp dir | `"./tmp-media"` | where recordings are written |
+| `maxFrames` | derived from duration | `40` | hard cap on frame count; overrides the derived budget entirely |
+| `secondsPerFrame` | `5` | `3` | sampling density before floor/ceiling — one frame roughly every N seconds of clip |
+| `framesFloor` | `10` | `5` | never derive fewer frames than this, even for a very short clip |
+| `framesCeiling` | `30` | `100` | never derive more frames than this, even for a very long clip — raise it if you'd rather have a denser sheet than a capped one |
+| `minInterval` | `1` | `0.5` | minimum seconds between kept frames |
+| `sampleFps` | `2` | `4` | pre-dedupe sampling rate |
+| `dedupe` | `true` | `false` | drop near-identical frames rather than sampling evenly |
+| `contactSheet` | `true` | `false` | produce the contact sheet — independent of `frames`, either or both can be on |
+| `frames` | `true` | `false` | write individual frame files — independent of `contactSheet`, either or both can be on |
+| `transcript` | `"auto"` | `"always"` | `auto` gates on measured loudness; `always`; `never` |
+| `keepSource` | `"auto"` | `"always"` | `auto` deletes in a temp dir, keeps in a persistent one |
+| `silenceFloorDb` | `-60` | `-50` | loudness threshold for the `auto` transcript gate, in dBFS (always ≤ 0 — 0 is full scale, more negative is quieter); mean volume below this is treated as silence |
+| `cellArea` | `480000` | `800000` | contact-sheet cell size budget, in pixels² |
+| `jpegQuality` | `2` | `5` | ffmpeg `-q:v` for the sheet (lower is higher quality) |
+| `whisperModel` | `"base"` | `"small"` | Whisper model size |
 
 The commonly-changed keys have a CLI flag (`--max-frames`, `--transcript always`,
 `--no-dedupe`, …); see `--help`. The rest are config-file-only tuning knobs.

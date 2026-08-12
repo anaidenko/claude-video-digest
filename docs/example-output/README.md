@@ -1,33 +1,24 @@
 # Example output
 
-Real output from this tool, so you can see what it actually produces before running it yourself.
+One real run, unedited — exactly the directory layout the tool produces.
 
-## `visual/` — a contact sheet, from a video with no narration
+Source: a 25-second clip pairing a plain background with a real narrated public-domain speech
+(JFK at Rice University, 1962 — Wikimedia Commons), chosen so a single example can show every
+part of the output at once: the sheet, the frames, and a transcript with real speech in it.
 
-Source: a 33-second clip of [Big Buck Bunny](https://www.bigbuckbunny.org) (CC BY 3.0), fetched
-via the yt-dlp fallback (this page isn't a Zight/CloudApp/Droplr link, so this also demonstrates
-that path). No speech, so `transcript` was set to `never` — that's a normal, cheap mode when you
-only want the visual overview.
+| File | |
+| --- | --- |
+| `contact-sheet.jpg` | The whole clip as one image, each tile timestamped. Read this first. |
+| `frames/` | Every extracted frame, full resolution — for when the sheet's downscale hides a detail. |
+| `transcript.txt` | Grouped by frame: each block holds the speech that started while that frame was on screen, with `—` where nobody spoke. The unbroken transcript follows at the end. |
+| `meta.json` | What was extracted and how — frame counts before and after thinning, the measured loudness (`-15.8 dB`, well above the silence gate, which is why transcription ran), and where the recording date came from. |
 
-- `contact-sheet.jpg` — ten tiles, each timestamped.
-- `frames/` — three of the ten individual full-resolution frames (the sheet has all ten; this
-  is a sample so the repo doesn't carry every frame from every example).
-- `meta.json` — what the tool recorded about the run.
+A run from a URL also writes `source.url` (a double-clickable shortcut back to the original) and,
+depending on `keepSource`, `source.mp4`. Neither is included here — the first is meaningless
+without the original link, and the second is just the input video.
 
-## `audio/` — a transcript grouped by frame, from a video WITH narration
+Generated with an ordinary invocation, no special flags:
 
-Source: a 25-second clip combining a plain color background with a real narrated public-domain
-speech (JFK, Rice University, 1962 — Wikimedia Commons). Built specifically to demonstrate the
-frame-grouped transcript: `--no-contact-sheet` was passed (frames were still extracted, since
-grouping needs them; the sheet itself just wasn't rendered for this example).
-
-- `transcript.txt` — the actual output. Read it to see the format: each frame's time window,
-  the speech that started within it, and `—` for frames nobody spoke over. The full unbroken
-  transcript follows at the end.
-- `meta.json` — what the tool recorded about the run, including the measured loudness
-  (`-15.8 dB` — well above the silence gate, which is why transcription ran at all).
-
-## Reproducing these
-
-Both were generated with ordinary invocations, no special flags beyond what's shown above —
-`--max-frames`, `--no-contact-sheet`, `--transcript`. Nothing here required editing the script.
+```bash
+./scripts/video-digest.sh <clip> --output <dir> --title "narrated demo" --max-frames 6
+```

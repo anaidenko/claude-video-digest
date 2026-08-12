@@ -88,6 +88,13 @@ half-populated directory and an error that names the symptom, not the cause.
   finding the real explanation. Fixed by skipping the clamp entirely when `MAX_FRAMES` is set —
   an explicit ask beats a heuristic. Verified in both directions: 40 with the flag (now yields
   up to 40), unchanged with no flag (negative control).
+- **`find_config_file()` picks ONE file, it does not merge.** `--config` beats a local
+  `.video-digest.json` beats `~/.config/video-digest/config.json` — first match wins, full stop.
+  A project-local config file fully shadows the user-wide one rather than overlaying it, so a
+  key set only in `~/.config/` silently stops applying the moment a directory gets its own
+  `.video-digest.json`. Documenting this as "layered, later wins" (an easy assumption — it's how
+  most tools' config precedence works) was wrong and shipped in README once already; re-check
+  `find_config_file()` itself before describing the precedence anywhere.
 - **`--force` and re-extraction are two different things, and conflating them wastes a
   re-download.** A prior version of this tool (the one this was extracted from) tied
   re-extraction to `--force`, which also re-downloads — so trying a higher `--max-frames` on an

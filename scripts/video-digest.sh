@@ -16,7 +16,7 @@ set -euo pipefail
 MAX_FRAMES=""
 FRAMES_FLOOR=10
 FRAMES_CEILING=30
-SECONDS_PER_FRAME=4.5
+SECONDS_PER_FRAME=5
 MIN_INTERVAL=1
 SAMPLE_FPS=2
 DEDUPE=1
@@ -46,7 +46,7 @@ Options:
     --ticket <id>        label for the output directory (any short id you use)
     --title <text>       short slug for the output directory
     --output <dir>        where to write output (default: OS temp dir; see README)
-    --max-frames <n>     override the frame cap (default: ~1 per 4.5s, 10-30)
+    --max-frames <n>     override the frame cap (default: ~1 per 5s, 10-30)
     --min-interval <s>   minimum seconds between frames (default 1)
     --sample-fps <n>     pre-dedupe sampling rate (default 2)
     --no-dedupe          even sampling instead of scene-change dedupe

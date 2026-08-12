@@ -14,6 +14,8 @@
         "doctor": "./scripts/video-digest.sh doctor",
         "lint": "command -v shellcheck >/dev/null || { echo 'shellcheck not installed: brew install shellcheck'; exit 1; }; shellcheck scripts/video-digest.sh",
         "lint:py": "python3 -m py_compile scripts/lib/*.py",
+        "test": "./test/run-tests.sh",
+        "test:docker": "./test/docker-test.sh",
         "docker:build": "docker build -t video-digest .",
         "docker:doctor": "docker run --rm video-digest doctor"
     }

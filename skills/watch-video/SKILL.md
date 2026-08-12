@@ -23,7 +23,8 @@ user navigates a persistent cache later. By default output goes to the OS temp d
 `--output <dir>` for a persistent one.
 
 Useful flags: `--max-frames N`, `--no-dedupe`, `--transcript never`, `--force`,
-`--sample-fps N`. Full list and current config: `--help`.
+`--sample-fps N` (raises the pre-dedupe frame pool — combine with `--no-dedupe` when a
+transient frame keeps getting dropped). Full list and current config: `--help`.
 
 ## Read it
 

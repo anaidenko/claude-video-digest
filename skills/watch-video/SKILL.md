@@ -15,8 +15,14 @@ the user for screenshots as a first move.
 ## Run it
 
 ```
-./scripts/video-digest.sh <url|file.mp4> [--ticket <id>] [--title <text>]
+"${CLAUDE_PLUGIN_ROOT}/scripts/video-digest.sh" <url|file.mp4> [--ticket <id>] [--title <text>]
 ```
+
+`${CLAUDE_PLUGIN_ROOT}` is the plugin's install directory — use it rather than a relative
+path. The script sits at the plugin **root**, not inside this skill's own folder, so a
+relative `./scripts/...` resolves to the wrong place and fails with "no such file or
+directory". Outside a plugin install (a plain clone), `./scripts/video-digest.sh` from the
+repo root is the equivalent.
 
 Pass `--ticket` and `--title` when known — they name the output directory, which is how the
 user navigates a persistent cache later. By default output goes to the OS temp directory; pass
@@ -78,10 +84,21 @@ downscale hides a detail.
   enough. It exists only for a URL input — a local file has no url to record.
 - Frames answer _what happened on screen_. They do not prove _why_ — confirm the mechanism
   elsewhere before reporting a cause.
+- **End the answer with where the output landed.** The script's last lines print the output
+  directory and the paths to `contact-sheet.jpg`, `frames/`, `transcript.txt` and `source.url`
+  — pass those through. A summary with no paths leaves the user unable to open the sheet, check
+  a frame you described, or reach the original recording, and they have to ask. One short
+  closing block is enough:
+
+<pre>
+Output: /path/to/&lt;run-dir&gt;
+  contact-sheet.jpg · frames/ (N) · transcript.txt · source.url
+</pre>
 
 ## Dependencies
 
 `ffmpeg` (with `libfreetype` for timestamps), `ffprobe` and `python3` are required and checked
 up front. `curl` is needed only for a URL input, `whisper` only when the audio carries speech,
 `yt-dlp` only for sites the built-in scraper can't resolve — all three degrade gracefully
-without failing the run. See `./scripts/video-digest.sh doctor` for what's currently available.
+without failing the run. See `"${CLAUDE_PLUGIN_ROOT}/scripts/video-digest.sh" doctor` for
+what's currently available.

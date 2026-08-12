@@ -1,6 +1,6 @@
 {
   "name": "claude-video-digest",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Turns any video into a readable digest — a timestamped contact sheet, a transcript grouped by frame, no hallucinated captions on silent tracks. ffmpeg + local Whisper, no cloud, no API keys.",
   "author": {
     "name": "Andrii Naidenko",

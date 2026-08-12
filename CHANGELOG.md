@@ -2,6 +2,40 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.0] — 2026-08-12
+
+First stable release: the tool is now covered by a test suite on two platforms, and the plugin
+install path has been verified end to end rather than assumed.
+
+### Fixed
+
+- **The skill failed on a real plugin install (exit 127).** `SKILL.md` invoked the script by a
+  relative path, which Claude Code resolves against the skill's own directory — but the script
+  lives at the plugin root. It now uses `${CLAUDE_PLUGIN_ROOT}`. This could only surface on an
+  actual plugin install; every clone-based test passed because the relative path is correct from
+  a repo root.
+- **A run with a persistent `--output` never printed where it wrote anything.** The output
+  directory was reported only for temp-dir runs. It now always prints, along with a path to
+  `source.url`, and the skill relays these so an answer ends with the files you can open.
+
+### Added
+
+- **Test suite** — `npm test` (48 assertions) and `npm run test:docker`, which runs the same
+  suite inside the project's Debian image. Verified on macOS bash 3.2 and Debian bash 5.x.
+  Every case corresponds to a bug that actually shipped.
+- **Team install documentation** — project-scoped install via the repo's own
+  `.claude/settings.json`, so a plugin ships with the project instead of per developer.
+
+### Changed
+
+- `secondsPerFrame` default 4.5 → 5.
+- README's configuration table gained an example column; `contactSheet` and `frames` are listed
+  separately (they are independent); `silenceFloorDb`'s negative default is explained as dBFS.
+- **Corrected the documented config-file precedence.** The two config files do not layer: the
+  first match wins (`--config`, then `./.video-digest.json`, then
+  `~/.config/video-digest/config.json`), so a project-local file fully shadows the user-wide one.
+  The previous description was wrong.
+
 ## [0.2.0] — 2026-08-12
 
 ### Added

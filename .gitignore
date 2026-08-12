@@ -3,3 +3,6 @@ __pycache__/
 /tmp-media/
 /out/
 .DS_Store
+
+# Working plans — personal development context, not part of the published plugin.
+/.claude/plans/

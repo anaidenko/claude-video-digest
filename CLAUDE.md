@@ -88,6 +88,16 @@ half-populated directory and an error that names the symptom, not the cause.
   finding the real explanation. Fixed by skipping the clamp entirely when `MAX_FRAMES` is set —
   an explicit ask beats a heuristic. Verified in both directions: 40 with the flag (now yields
   up to 40), unchanged with no flag (negative control).
+- **A relative script path in SKILL.md breaks the plugin install.** SKILL.md said
+  `./scripts/video-digest.sh`; installed as a plugin, Claude resolved that against the skill's
+  own directory and called
+  `.../0.2.0/skills/watch-video/scripts/video-digest.sh` → exit 127, "no such file or
+  directory". The script is at the plugin **root**, one level up from `skills/<name>/`. Found
+  only by installing the plugin and running it for real — every native/clone test passes,
+  because there `./scripts/...` from the repo root happens to be correct. Use
+  `${CLAUDE_PLUGIN_ROOT}/scripts/video-digest.sh`, which Claude Code sets to the plugin's
+  install dir. The run recovered (Claude `find`-ed the script), which is worse than a hard
+  failure: it looks like it worked.
 - **`find_config_file()` picks ONE file, it does not merge.** `--config` beats a local
   `.video-digest.json` beats `~/.config/video-digest/config.json` — first match wins, full stop.
   A project-local config file fully shadows the user-wide one rather than overlaying it, so a

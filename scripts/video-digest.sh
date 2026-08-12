@@ -836,8 +836,18 @@ printf '\n%s  %ss  %s frames (from %s)  recorded %s (%s)\n' \
     "$SHARE_ID" "$DURATION" "$kept" "$RAW_COUNT" "$RECORDED" "$DATE_SOURCE"
 if [ -n "$SHEET" ]; then printf 'sheet:      %s\n' "$SHEET"; fi
 if [ "$WRITE_FRAMES" -eq 1 ]; then printf 'frames:     %s\n' "$FRAMES_DIR"; fi
-printf 'transcript: %s\n' "$TRANSCRIPT_STATE"
+if [ -f "$TARGET_DIR/transcript.txt" ]; then
+    printf 'transcript: %s\n' "$TARGET_DIR/transcript.txt"
+else
+    printf 'transcript: %s\n' "$TRANSCRIPT_STATE"
+fi
 printf 'source:     %s\n' "$KEEP_DECISION"
+if [ -f "$TARGET_DIR/source.url" ]; then
+    printf 'original:   %s\n' "$TARGET_DIR/source.url"
+fi
+# The folder is what the user actually navigates to, so print it on every run
+# — not only the temp-dir case, which is how this started and meant a
+# persistent --output run never said where anything had gone.
 # ⚠️ Must be a real `if`, not `[ ... ] && printf`: this is the LAST statement
 # in the script, and a short-circuit that evaluates false becomes the
 # script's own exit code even though everything above succeeded. Hit this
@@ -845,6 +855,8 @@ printf 'source:     %s\n' "$KEEP_DECISION"
 # after a fully successful run.
 if [ "$OUTPUT_IS_TEMP" -eq 1 ]; then
     printf 'output:     %s (OS temp dir — pass --output to persist)\n' "$TARGET_DIR"
+else
+    printf 'output:     %s\n' "$TARGET_DIR"
 fi
 
 exit 0

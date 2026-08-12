@@ -91,6 +91,35 @@ dependency fails immediately** with an install hint (`brew install ffmpeg` / `ap
 ffmpeg`) — before any download or extraction runs, so a broken environment never produces a
 half-written output directory.
 
+### For a team — install with the project, not per developer
+
+Commit this to the repo's `.claude/settings.json` and everyone who clones it gets the plugin,
+with no per-developer install step:
+
+```json
+{
+    "extraKnownMarketplaces": {
+        "anaidenko": {
+            "source": { "source": "github", "repo": "anaidenko/claude-video-digest" }
+        }
+    },
+    "enabledPlugins": { "claude-video-digest@anaidenko": true }
+}
+```
+
+Project-scoped plugins are versioned with the repo, survive git worktrees, and update through
+the normal `claude plugin update`.
+
+<details>
+<summary>Why not <code>npx skills add</code>?</summary>
+
+The [vercel-labs `skills`](https://github.com/vercel-labs/skills) CLI does discover this repo,
+but it copies **only the skill directory** — you get `SKILL.md` and none of `scripts/`, which
+lives at the repo root. The result installs cleanly and then cannot run. That CLI fits
+text-only skills; this one ships an executable, so use one of the plugin installs above.
+
+</details>
+
 **Platforms:** macOS and Linux, both covered by the test suite (`npm test` for macOS's bash 3.2,
 `npm run test:docker` for Debian's bash 5.x — both currently 47-48 assertions, green). Windows
 untested — expected to work under Docker Desktop / WSL2, but not claimed until someone confirms

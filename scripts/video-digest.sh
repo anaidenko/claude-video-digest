@@ -33,7 +33,6 @@ FORCE=0
 TICKET=""
 TITLE=""
 SOURCE=""
-SUBCOMMAND=""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -115,7 +114,12 @@ run_doctor() {
     check yt-dlp optional "sites beyond the built-in scraper (Loom, YouTube, Vimeo, ...)"
 
     if command -v ffmpeg >/dev/null 2>&1; then
-        if ffmpeg -hide_banner -filters 2>/dev/null | command grep -q ' drawtext '; then
+        # Capture first, then match — same reason as the real probe below:
+        # `grep -q` in a pipe can exit before ffmpeg finishes writing, ffmpeg
+        # dies of SIGPIPE, and pipefail can turn that into a false "missing"
+        # on a build that actually has the filter.
+        ffmpeg_filters="$(ffmpeg -hide_banner -filters 2>/dev/null || true)"
+        if printf '%s' "$ffmpeg_filters" | command grep -q ' drawtext '; then
             printf '  [ok]      drawtext   contact sheet will have timestamps\n'
         else
             printf '  [absent]  drawtext   this ffmpeg build lacks libfreetype — sheet will have no timestamps\n'
@@ -160,15 +164,27 @@ load_config_file() {
 }
 
 # A pre-scan for --config so it can be honoured before the main option loop
-# (which needs config values loaded before CLI flags override them).
+# (which needs config values loaded before CLI flags override them). Must
+# skip every OTHER value-taking flag's argument while walking, or a value
+# that happens to equal "--config" (e.g. `--title --config`) is misread as
+# the flag itself — and the token right after it (which may be an unrelated
+# flag like --output) misread as the config path.
 args=("$@")
 i=0
 while [ $i -lt ${#args[@]} ]; do
-    if [ "${args[$i]}" = "--config" ]; then
-        j=$((i + 1))
-        CONFIG_FILE_ARG="${args[$j]:-}"
-        [ -n "$CONFIG_FILE_ARG" ] || die "--config needs a path"
-    fi
+    case "${args[$i]}" in
+        --config)
+            j=$((i + 1))
+            [ $j -lt ${#args[@]} ] || die "--config needs a value"
+            CONFIG_FILE_ARG="${args[$j]}"
+            i=$((i + 2))
+            continue
+            ;;
+        --ticket|--title|--output|--max-frames|--min-interval|--sample-fps|--transcript|--keep-source)
+            i=$((i + 2)) # skip this flag's own value too
+            continue
+            ;;
+    esac
     i=$((i + 1))
 done
 
@@ -183,18 +199,26 @@ fi
 # --- argument parsing (flags override config) --------------------------
 
 while [ $# -gt 0 ]; do
+    # ⚠️ `${2:-}` only guards the EXPANSION; `shift 2` with a single argument
+    # left still fails, and set -e then kills the script with no message at
+    # all (a flag typo'd as the last argument, e.g. `... --ticket`, silently
+    # exits 1). Value-taking flags therefore validate `$#` before consuming.
     case "$1" in
-        --ticket) TICKET="${2:-}"; shift 2 ;;
-        --title) TITLE="${2:-}"; shift 2 ;;
-        --output) OUTPUT_DIR="${2:-}"; shift 2 ;;
-        --max-frames) MAX_FRAMES="${2:-}"; shift 2 ;;
-        --min-interval) MIN_INTERVAL="${2:-}"; shift 2 ;;
-        --sample-fps) SAMPLE_FPS="${2:-}"; shift 2 ;;
+        --ticket|--title|--output|--max-frames|--min-interval|--sample-fps|--transcript|--keep-source|--config)
+            [ $# -ge 2 ] || die "$1 needs a value" ;;
+    esac
+    case "$1" in
+        --ticket) TICKET="$2"; shift 2 ;;
+        --title) TITLE="$2"; shift 2 ;;
+        --output) OUTPUT_DIR="$2"; shift 2 ;;
+        --max-frames) MAX_FRAMES="$2"; shift 2 ;;
+        --min-interval) MIN_INTERVAL="$2"; shift 2 ;;
+        --sample-fps) SAMPLE_FPS="$2"; shift 2 ;;
         --no-dedupe) DEDUPE=0; shift ;;
         --no-contact-sheet) CONTACT_SHEET=0; shift ;;
         --no-frames) WRITE_FRAMES=0; shift ;;
-        --transcript) TRANSCRIPT_MODE="${2:-}"; shift 2 ;;
-        --keep-source) KEEP_SOURCE="${2:-}"; shift 2 ;;
+        --transcript) TRANSCRIPT_MODE="$2"; shift 2 ;;
+        --keep-source) KEEP_SOURCE="$2"; shift 2 ;;
         --force) FORCE=1; shift ;;
         --config) shift 2 ;; # already consumed by the pre-scan above
         -h|--help) usage; exit 0 ;;
@@ -360,6 +384,7 @@ CDN_URL=""
 RECORDED=""
 DATE_SOURCE=""
 TMP_DL=""
+NO_FRAMES_TMP="" # set below only when --no-frames — the throwaway FRAMES_DIR
 EXTRACTOR="local"
 
 # An EXIT trap's return value becomes the script's exit code, so a trailing
@@ -367,6 +392,7 @@ EXTRACTOR="local"
 # cache hit) would exit 1 after a completely successful run.
 cleanup() {
     if [ -n "$TMP_DL" ]; then rm -rf "$TMP_DL"; fi
+    if [ -n "$NO_FRAMES_TMP" ]; then rm -rf "$NO_FRAMES_TMP"; fi
     return 0
 }
 trap cleanup EXIT
@@ -384,7 +410,15 @@ else
         note "fetching $SHARE_URL"
         page="$TMP_DL/page.html"
         fetched=0
-        if curl -sSL --max-time 60 "$SHARE_URL" -o "$page" 2>/dev/null; then
+        # ⚠️ SSRF: the scraper follows a URL taken from the PAGE's own content
+        # below (CDN_URL), not one the user chose — a malicious page can point
+        # that second request at any host, including internal ones, and -L
+        # means a redirect chain can do the same even starting from a URL that
+        # looked external. This is not eliminated here (a CLI tool fetching a
+        # URL a user handed it has some irreducible version of this risk), but
+        # bounded: only http(s) is followed, redirect depth is capped, and the
+        # resolved host is printed so a silent pivot is at least visible.
+        if curl -sSL --proto '=https,http' --max-redirs 3 --max-time 60 "$SHARE_URL" -o "$page" 2>/dev/null; then
             fetched=1
         fi
 
@@ -400,9 +434,25 @@ else
         if [ -n "$CDN_URL" ]; then
             CDN_URL="${CDN_URL//&amp;/&}"
             EXTRACTOR="scrape"
-            note "downloading"
-            curl -sSL --max-time 600 -o "$TMP_DL/source.mp4" "$CDN_URL" \
+            # The page's content chose this URL, not the user — print the host
+            # so a pivot to somewhere unexpected (see the SSRF note above) is
+            # visible rather than silent.
+            cdn_host="$(printf '%s' "$CDN_URL" | sed -E 's#^https?://([^/]+).*#\1#')"
+            note "downloading from $cdn_host"
+            curl -sSL --proto '=https,http' --max-redirs 3 --max-time 600 -o "$TMP_DL/source.mp4" "$CDN_URL" \
                 || die "download failed: $CDN_URL"
+
+            # A share link can expire or sit behind a login wall and still
+            # answer 200 with an HTML page instead of the video — downloaded
+            # as if it were one, that used to fail later with "could not read
+            # duration", which blames the wrong thing. A cheap magic-byte
+            # check catches the common case (an HTML error/login page) before
+            # ffmpeg ever runs, without false-rejecting a real video whose
+            # container this check doesn't specifically recognise.
+            first_bytes="$(command grep -aiEc '<html|<!doctype html' "$TMP_DL/source.mp4" 2>/dev/null | head -1 || true)"
+            if [ "${first_bytes:-0}" -gt 0 ] 2>/dev/null; then
+                die "the link returned an HTML page, not a video — it may have expired or need login: $CDN_URL"
+            fi
 
             # The CDN filename usually carries the real recording date, which
             # can predate whatever this URL was shared in by weeks.
@@ -485,7 +535,12 @@ if [ "$WRITE_FRAMES" -eq 1 ]; then
     rm -rf "$FRAMES_DIR"
     mkdir -p "$FRAMES_DIR"
 else
-    FRAMES_DIR="$(mktemp -d)" # frames still extracted to build the sheet; discarded after
+    # Frames are still extracted to build the sheet; the dir is meant to be
+    # discarded after. It previously wasn't — nothing removed it, so every
+    # --no-frames run leaked a directory of JPEGs into the OS temp dir. It
+    # goes through `cleanup()` now, same as the other scratch dirs.
+    FRAMES_DIR="$(mktemp -d)"
+    NO_FRAMES_TMP="$FRAMES_DIR"
 fi
 
 if [ -n "$TMP_DL" ] && [ -f "$TMP_DL/source.mp4" ]; then
@@ -668,7 +723,16 @@ if [ "$TRANSCRIPT_MODE" != "never" ]; then
             if whisper "$SOURCE_MP4" --model "$WHISPER_MODEL" --output_format json --output_dir "$WORK" >/dev/null 2>&1; then
                 out=("$WORK"/*.json)
                 if [ ${#out[@]} -gt 0 ]; then
-                    printf '%s\n' "${FRAME_TIMES[@]}" > "$WORK/frame_times.txt"
+                    # Unreachable today (RAW_COUNT > 0 is enforced earlier and
+                    # the loop that fills FRAME_TIMES always keeps index 0),
+                    # but bash 3.2 + set -u throws "unbound variable" on an
+                    # empty array expansion — guard it anyway, the same trap
+                    # CLAUDE.md documents for every other array here.
+                    if [ ${#FRAME_TIMES[@]} -gt 0 ]; then
+                        printf '%s\n' "${FRAME_TIMES[@]}" > "$WORK/frame_times.txt"
+                    else
+                        : > "$WORK/frame_times.txt"
+                    fi
                     if [ "$WRITE_FRAMES" -eq 1 ] && python3 "$SCRIPT_DIR/lib/group-transcript.py" \
                         "${out[0]}" "$WORK/frame_times.txt" "$DURATION" \
                         "$TARGET_DIR/transcript.txt" 2>/dev/null; then

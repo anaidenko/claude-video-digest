@@ -43,7 +43,11 @@ def coerce(key, value, kind):
     if kind == "int_or_null":
         return "" if value is None else str(int(value))
     if kind == "number":
-        return str(value)
+        # Not just str(value): a non-numeric JSON value (e.g. a typo'd
+        # string) would otherwise pass straight through as shell text and
+        # silently change what the awk-based gates in video-digest.sh
+        # compare against, rather than failing loudly here.
+        return str(float(value))
     if kind == "bool01":
         return "1" if value else "0"
     if kind.startswith("enum:"):

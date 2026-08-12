@@ -61,6 +61,40 @@ half-populated directory and an error that names the symptom, not the cause.
 - **An `EXIT` trap's return value becomes the script's own exit code.** `cleanup()` must end
   with an explicit `return 0`; a trailing short-circuit there fails the whole run on a
   successful cache-hit path (nothing to clean up → the test is false → exit 1).
+- **`VAR="${2:-}"; shift 2` only guards the expansion, not the shift.** If `$1` is the last
+  argument (a flag typo'd at the end of the command, e.g. `... --ticket`), `${2:-}` happily
+  expands to empty — but `shift 2` with a single argument left still fails, and `set -e` kills
+  the script with **no error message at all**. Every value-taking flag now checks `[ $# -ge 2 ]`
+  before consuming, with a real `die "$1 needs a value"`.
+- **An argument pre-scan that matches a literal flag string anywhere in `$@` misreads other
+  flags' values.** The `--config` pre-scan (needed before the main parse loop, since config
+  values must load before CLI flags can override them) originally checked every token for
+  equality with `--config` — so `--title --config --output /x` read `--output` as the config
+  path. The pre-scan has to walk the same value-taking-flag structure as the main loop and skip
+  each flag's own argument, not just look for one literal string.
+- **A "discarded temp dir" comment is not the same as code that discards it.** `--no-frames`
+  still extracts frames (to build the sheet) into a `mktemp -d`, with a comment saying it's
+  "discarded after" — nothing did. It leaked one directory of JPEGs into the OS temp dir per
+  run. Fixed the same way as the other scratch dirs: tracked in a variable, removed in
+  `cleanup()`. A comment describing cleanup that hasn't been wired up reads exactly like real
+  cleanup on a skim.
+
+## Security notes
+
+- **The scraper is a bounded SSRF surface, not a closed one.** Given a URL, it fetches the page
+  and then follows a *second* URL found in that page's own content (the embedded `.mp4`) — so
+  the page, not the user, has a say in what gets requested next, and `curl -L` means a redirect
+  chain can retarget the request even from an initially-external URL. Mitigations in place:
+  `--proto '=https,http'` (no `file://`/`gopher://` etc.), `--max-redirs 3`, and the resolved
+  host is printed before downloading so a pivot is visible rather than silent. None of this
+  closes the hole — a CLI tool that fetches a URL you hand it has some irreducible version of
+  this risk — it just bounds and surfaces it. README says so explicitly; don't let that caveat
+  quietly disappear in a future edit.
+- **A share link can 200 with an HTML page instead of a video** — expired link, login wall,
+  moved content. Downloaded and handed to ffmpeg as if it were the real thing, this used to
+  surface as "could not read duration — is this a video file?", which blames the wrong layer.
+  A magic-byte check (`<html`/`<!doctype html` in the first bytes) now catches the common case
+  before ffmpeg runs, with a message that names what actually happened.
 
 ## Design decisions that look arbitrary and aren't
 

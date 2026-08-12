@@ -8,29 +8,44 @@ gives it something it can actually read.
 _Nine frames from a 33-second public-domain clip ([Big Buck Bunny](https://www.bigbuckbunny.org),
 CC BY 3.0), each labelled with its approximate timestamp._
 
-## Why not just point Claude at a video-watching tool that already exists?
+## What this does that the existing video-watching tools don't
 
-A couple of good ones do the general job. This one exists for what they don't:
+A couple of good ones already do the general job. Four things here are specific to this one —
+each followed by what the other two do instead:
 
-- **Neither produces a timestamped contact sheet.** One emits no sheet at all; the other tiles
-  frames labelled with filenames, not when they happened.
-- **Neither ties the transcript to the frames.** You get speech and screen state as two separate
-  things you have to correlate yourself.
-- **Neither checks whether the audio actually has anything on it.** Both will run a transcriber
-  over a digitally-silent track (screen recorders write one when the mic is off) and hand you
-  hallucinated captions.
-- **Neither handles the share hosts screen-recording tools actually use** — Zight and CloudApp,
-  verified — because both are built entirely on yt-dlp, which doesn't know those hosts.
+- **A contact sheet labelled with timestamps.** One tile per sampled moment, each stamped with
+  when it happened, so a single image places every event on the clip's timeline. _Elsewhere:_
+  one tool emits no sheet at all; the other tiles frames labelled with filenames, not with when
+  they happened.
+- **The transcript is grouped under the frame each line was spoken over.** Speech and screen
+  state arrive already correlated, as one artifact. _Elsewhere:_ both keep them separate, and
+  lining them up is left to you.
+- **The transcriber runs only when the audio actually carries signal**, measured as loudness
+  rather than inferred from the track existing. _Elsewhere:_ both check only that an audio
+  stream is present — so both will happily transcribe a digitally-silent screen recording (a
+  recorder writes such a track when the mic is off) and hand you hallucinated captions.
+- **The share hosts screen-recording tools actually use are supported**: Zight and CloudApp,
+  verified. This tool scrapes them directly by looking for an embedded `.mp4` on the page, and
+  falls back to yt-dlp (if installed) for everything yt-dlp does support — YouTube, Loom, Vimeo,
+  and hundreds more. _Elsewhere:_ both are built entirely on yt-dlp, which doesn't know those
+  hosts, so neither can open such a link at all.
 
-This tool scrapes those hosts directly by looking for an embedded `.mp4` on the page, and falls
-back to yt-dlp (if installed) for everything yt-dlp does support — YouTube, Loom, Vimeo, and
-hundreds more. So it isn't a competing "let AI watch video" tool; it's the one that also
-handles the recordings the others can't open.
+So it isn't a competing "let AI watch video" tool; it's the one that also handles the
+recordings the others can't open.
 
 **Droplr** is expected to work the same way (same `d.pr` short-link, same embedded-video page
 shape) but is **unverified** — no live Droplr link was available to test against. If you try it
 and it works (or doesn't), an issue with the link (or a redacted screenshot of the failure) is
 useful.
+
+## A note on fetching URLs
+
+Given a URL, the scraper follows a second URL taken from *that page's own content* to find the
+video — which means the page, not just you, has a say in what gets requested next. This is
+bounded (only `http(s)` is followed, redirects are capped) but not eliminated: pointing this
+tool at a URL you don't trust carries the same class of risk as pointing `curl -L` at one. Treat
+it accordingly — it's built for share links from people you're already working with, not for
+arbitrary URLs from the internet.
 
 ## Install
 
@@ -111,8 +126,10 @@ Three layers, later wins: built-in defaults → config file → CLI flags. Confi
 | `jpegQuality` | `2` | ffmpeg `-q:v` for the sheet |
 | `whisperModel` | `"base"` | Whisper model size |
 
-Every CLI flag has the same name in kebab-case (`--max-frames`, `--transcript always`, ...); see
-`--help` for the full list.
+The commonly-changed keys have a CLI flag in kebab-case (`--max-frames`, `--transcript always`,
+`--no-dedupe`, ...) — see `--help` for the full list. The rest (`secondsPerFrame`,
+`framesFloor`/`framesCeiling`, `cellArea`, `jpegQuality`, `silenceFloorDb`, `whisperModel`) are
+config-file-only; they're tuning knobs rather than per-run choices.
 
 ## Verified platforms
 

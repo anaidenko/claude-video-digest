@@ -76,3 +76,11 @@ half-populated directory and an error that names the symptom, not the cause.
 - **Output defaults to the OS temp directory, not the current directory.** Writing untracked
   files into a stranger's project by default would be rude; a persistent location is opt-in via
   `--output` / config, and that's also what `keepSource: auto` keys off.
+
+## Known gap
+
+**Droplr is unverified.** The extractor chain scrapes for an embedded `.mp4` on the page, which
+is confirmed working for Zight and CloudApp; Droplr is architecturally the same shape (a `d.pr`
+short link resolving to an embedded-video page) but no live Droplr link was available to test
+against while building this. Don't upgrade README's "expected, unverified" wording to a plain
+claim of support without actually running it against one.

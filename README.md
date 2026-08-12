@@ -19,12 +19,18 @@ A couple of good ones do the general job. This one exists for what they don't:
 - **Neither checks whether the audio actually has anything on it.** Both will run a transcriber
   over a digitally-silent track (screen recorders write one when the mic is off) and hand you
   hallucinated captions.
-- **Neither handles the share hosts screen-recording tools actually use** — Zight, CloudApp,
-  Droplr-style links — because both are built entirely on yt-dlp, which doesn't know those hosts.
+- **Neither handles the share hosts screen-recording tools actually use** — Zight and CloudApp,
+  verified — because both are built entirely on yt-dlp, which doesn't know those hosts.
 
-This tool scrapes those hosts directly, and falls back to yt-dlp (if installed) for everything
-yt-dlp does support — YouTube, Loom, Vimeo, and hundreds more. So it isn't a competing "let AI
-watch video" tool; it's the one that also handles the recordings the others can't open.
+This tool scrapes those hosts directly by looking for an embedded `.mp4` on the page, and falls
+back to yt-dlp (if installed) for everything yt-dlp does support — YouTube, Loom, Vimeo, and
+hundreds more. So it isn't a competing "let AI watch video" tool; it's the one that also
+handles the recordings the others can't open.
+
+**Droplr** is expected to work the same way (same `d.pr` short-link, same embedded-video page
+shape) but is **unverified** — no live Droplr link was available to test against. If you try it
+and it works (or doesn't), an issue with the link (or a redacted screenshot of the failure) is
+useful.
 
 ## Install
 

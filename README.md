@@ -77,6 +77,10 @@ claude plugin marketplace add anaidenko/claude-plugins
 claude plugin install claude-video-digest@anaidenko
 ```
 
+The plugin is served from [anaidenko/claude-plugins](https://github.com/anaidenko/claude-plugins),
+a marketplace carrying several plugins — adding it once makes the others
+available too.
+
 **Required:**
 - `ffmpeg`, `ffprobe` — frame extraction and the contact sheet
 - `python3` — reads the config, writes `meta.json`, groups the transcript
@@ -107,7 +111,7 @@ keeps the old code until you do.
 ### Uninstall
 
 ```bash
-claude plugin uninstall claude-video-digest
+claude plugin uninstall claude-video-digest@anaidenko
 claude plugin marketplace remove anaidenko
 ```
 

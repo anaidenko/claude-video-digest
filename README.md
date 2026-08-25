@@ -73,8 +73,8 @@ source.mp4          kept or deleted depending on keepSource
 ## Install
 
 ```bash
-claude plugin marketplace add anaidenko/claude-video-digest
-claude plugin install claude-video-digest
+claude plugin marketplace add anaidenko/claude-plugins
+claude plugin install claude-video-digest@anaidenko
 ```
 
 **Required:**
@@ -124,7 +124,7 @@ with no per-developer install step:
 {
     "extraKnownMarketplaces": {
         "anaidenko": {
-            "source": { "source": "github", "repo": "anaidenko/claude-video-digest" }
+            "source": { "source": "github", "repo": "anaidenko/claude-plugins" }
         }
     },
     "enabledPlugins": { "claude-video-digest@anaidenko": true }

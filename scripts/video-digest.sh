@@ -432,10 +432,22 @@ slugify() {
 }
 
 # Downloads $1 with yt-dlp to $TMP_DL/source.mp4, whatever container it
-# picked: ffprobe and ffmpeg read the content, not the extension.
+# picked: ffprobe and ffmpeg read the content, not the extension. On failure
+# it returns 1 with yt-dlp's own reason in YTDLP_ERROR: the last ERROR: line,
+# which is where "Sign in to confirm you're not a bot", private and
+# members-only videos explain themselves.
+YTDLP_ERROR=""
 ytdlp_download() {
-    local url="$1" found
-    yt-dlp --no-progress -o "$TMP_DL/source.%(ext)s" "$url" || return 1
+    local url="$1" err="$TMP_DL/yt-dlp.stderr" found
+    # The HTML a player page served the scrape must not be mistaken for
+    # yt-dlp's file by the lookup below.
+    rm -f "$TMP_DL/source.mp4"
+    if ! yt-dlp --no-progress -o "$TMP_DL/source.%(ext)s" "$url" 2>"$err"; then
+        YTDLP_ERROR="$(command grep '^ERROR:' "$err" | tail -1 | sed 's/^ERROR: *//' || true)"
+        [ -n "$YTDLP_ERROR" ] || YTDLP_ERROR="$(tail -1 "$err" 2>/dev/null || true)"
+        [ -n "$YTDLP_ERROR" ] || YTDLP_ERROR="no reason given"
+        return 1
+    fi
     found="$(find "$TMP_DL" -maxdepth 1 -name 'source.*' -type f | head -1)"
     [ -n "$found" ] || die "yt-dlp reported success but wrote no file"
     [ "$found" = "$TMP_DL/source.mp4" ] || mv "$found" "$TMP_DL/source.mp4"
@@ -474,7 +486,7 @@ else
         # "download" and then die on, blaming an expired link.
         EXTRACTOR="yt-dlp"
         note "downloading $SHARE_URL with yt-dlp"
-        ytdlp_download "$SHARE_URL" || die "yt-dlp could not download: $SHARE_URL"
+        ytdlp_download "$SHARE_URL" || die "yt-dlp could not download $SHARE_URL: $YTDLP_ERROR"
     else
         need curl curl
         note "fetching $SHARE_URL"
@@ -533,19 +545,31 @@ else
             # container this check doesn't specifically recognise.
             first_bytes="$(command grep -aiEc '<html|<!doctype html' "$TMP_DL/source.mp4" 2>/dev/null | head -1 || true)"
             if [ "${first_bytes:-0}" -gt 0 ] 2>/dev/null; then
-                die "the link returned an HTML page, not a video — it may have expired or need login: $CDN_URL"
+                # og:video can name a player PAGE rather than a file: Vimeo's
+                # player.vimeo.com/video/<id>, YouTube's /embed/<id>. yt-dlp
+                # may well know the host, and the share URL, not the player,
+                # is what it is built to read.
+                html_url="$CDN_URL"
+                if ! command -v yt-dlp >/dev/null 2>&1; then
+                    die "the link returned an HTML page, not a video — it may have expired or need login, or be a player page that yt-dlp can read (install it: $(ytdlp_install_hint)): $html_url"
+                fi
+                note "the page's video link served HTML (a player page?) — handing the share link to yt-dlp"
+                EXTRACTOR="yt-dlp"
+                CDN_URL=""
+                ytdlp_download "$SHARE_URL" \
+                    || die "the page's video link served an HTML page, not a video ($html_url), and yt-dlp could not download $SHARE_URL either: $YTDLP_ERROR"
+            else
+                # The CDN filename usually carries the real recording date,
+                # which can predate whatever this URL was shared in by weeks.
+                fname="$(printf '%s' "$CDN_URL" | sed 's/?.*//')"
+                fname="$(basename "$fname" | sed 's/%20/ /g')"
+                RECORDED="$(printf '%s' "$fname" | command grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1 || true)"
+                [ -n "$RECORDED" ] && DATE_SOURCE="cdn-filename"
             fi
-
-            # The CDN filename usually carries the real recording date, which
-            # can predate whatever this URL was shared in by weeks.
-            fname="$(printf '%s' "$CDN_URL" | sed 's/?.*//')"
-            fname="$(basename "$fname" | sed 's/%20/ /g')"
-            RECORDED="$(printf '%s' "$fname" | command grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1 || true)"
-            [ -n "$RECORDED" ] && DATE_SOURCE="cdn-filename"
         elif command -v yt-dlp >/dev/null 2>&1; then
             EXTRACTOR="yt-dlp"
             note "no embedded mp4 found on the page — handing off to yt-dlp"
-            ytdlp_download "$SHARE_URL" || die "yt-dlp could not download: $SHARE_URL"
+            ytdlp_download "$SHARE_URL" || die "yt-dlp could not download $SHARE_URL: $YTDLP_ERROR"
         else
             die "no video found on $SHARE_URL, and yt-dlp is not installed to try further — install yt-dlp for broader site support, or pass a local file"
         fi

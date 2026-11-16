@@ -58,8 +58,11 @@ its own for a user. Headings here are bracketed and dated in UTC.
 - If `## [Unreleased]` exists, rename it to `## [X.Y.Z] — YYYY-MM-DD` (today in
   UTC: `date -u +%F`). Then check it against `git log "$PREV"..HEAD`: add any
   user-visible change it is missing.
-- Otherwise write the section from that log.
-- Use `### Added` / `### Changed` / `### Fixed`, matching the entries below it.
+- Otherwise write the section from that log. `feat:` and `fix:` commits are
+  the material. `docs: Record …` commits are internal trap notes: leave them
+  out.
+- Use `### Added` / `### Changed` / `### Fixed`, matching the entries below it
+  in tone: what changed for the user, and what to do if anything.
 
 ## 4. Bump, commit, tag
 
@@ -98,6 +101,8 @@ gh run watch <databaseId> --exit-status
 ```
 
 The run can take a few seconds to appear: repeat the `list` until it does.
+Right after a push, an unfiltered `--limit 1` can return the previous release's
+run.
 
 ## 7. Verify the result, not the log
 

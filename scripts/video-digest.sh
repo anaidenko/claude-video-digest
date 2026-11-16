@@ -330,6 +330,17 @@ youtube_id() {
     fi
 }
 
+is_youtube_host() {
+    [[ "$1" =~ ^https?://([A-Za-z0-9-]+\.)*(youtube(-nocookie)?\.com|youtu\.be)([:/?#]|$) ]]
+}
+
+ytdlp_install_hint() {
+    case "$(uname -s)" in
+        Darwin) printf 'brew install yt-dlp deno' ;;
+        *) printf 'pipx install yt-dlp (or your distro'"'"'s package)' ;;
+    esac
+}
+
 if [ -f "$SOURCE" ]; then
     LOCAL_INPUT="$(cd "$(dirname "$SOURCE")" && pwd)/$(basename "$SOURCE")"
     SHARE_ID="$(basename "$SOURCE")"
@@ -349,6 +360,11 @@ elif printf '%s' "$SOURCE" | command grep -qE '^https?://'; then
         # are case-sensitive, but a collision is negligible, and a
         # case-insensitive filesystem (macOS) would merge such dirs anyway.
         raw_id="yt-$YOUTUBE_ID"
+    elif is_youtube_host "$SOURCE"; then
+        # A playlist, channel or search page. --no-playlist cannot help: it
+        # only picks the video when a link names both. And the id rule below
+        # would derive "playlist" or "videos" for all of them alike.
+        die "not a link to one YouTube video (a playlist or a channel?) — pass the video's own link: $SOURCE"
     else
         raw_id="${SOURCE%/}"
         raw_id="${raw_id##*/}"
@@ -363,6 +379,13 @@ else
 fi
 
 [ -n "$SHARE_ID" ] || die "could not derive an id from '$SOURCE'"
+
+# The one rule: a missing dependency fails here, before any directory, fetch
+# or download. YouTube has no fallback to degrade to: the page scrape cannot
+# reach the video (og:video is an HTML player), so yt-dlp is the only path.
+if [ -n "$YOUTUBE_ID" ] && ! command -v yt-dlp >/dev/null 2>&1; then
+    die "YouTube links need yt-dlp, which is not installed. Install it: $(ytdlp_install_hint)"
+fi
 
 # --- directory lookup -----------------------------------------------------
 # Bash passes an unmatched glob through literally, so nullglob is load-bearing:
@@ -408,6 +431,16 @@ slugify() {
         | sed -e 's/[^a-z0-9]\{1,\}/-/g' -e 's/^-//' -e 's/-$//' | cut -c1-40
 }
 
+# Downloads $1 with yt-dlp to $TMP_DL/source.mp4, whatever container it
+# picked: ffprobe and ffmpeg read the content, not the extension.
+ytdlp_download() {
+    local url="$1" found
+    yt-dlp --no-progress -o "$TMP_DL/source.%(ext)s" "$url" || return 1
+    found="$(find "$TMP_DL" -maxdepth 1 -name 'source.*' -type f | head -1)"
+    [ -n "$found" ] || die "yt-dlp reported success but wrote no file"
+    [ "$found" = "$TMP_DL/source.mp4" ] || mv "$found" "$TMP_DL/source.mp4"
+}
+
 SOURCE_MP4=""
 CDN_URL=""
 RECORDED=""
@@ -435,6 +468,13 @@ else
     if [ -n "$LOCAL_INPUT" ]; then
         cp "$LOCAL_INPUT" "$TMP_DL/source.mp4"
         DATE_SOURCE="ffprobe"
+    elif [ -n "$YOUTUBE_ID" ]; then
+        # Straight to yt-dlp, no page fetch: the watch page's og:video points
+        # at /embed/<id>, an HTML player, which the scrape below used to
+        # "download" and then die on, blaming an expired link.
+        EXTRACTOR="yt-dlp"
+        note "downloading $SHARE_URL with yt-dlp"
+        ytdlp_download "$SHARE_URL" || die "yt-dlp could not download: $SHARE_URL"
     else
         need curl curl
         note "fetching $SHARE_URL"
@@ -505,11 +545,7 @@ else
         elif command -v yt-dlp >/dev/null 2>&1; then
             EXTRACTOR="yt-dlp"
             note "no embedded mp4 found on the page — handing off to yt-dlp"
-            yt-dlp --no-progress -o "$TMP_DL/source.%(ext)s" "$SHARE_URL" \
-                || die "yt-dlp could not download: $SHARE_URL"
-            found="$(find "$TMP_DL" -maxdepth 1 -name 'source.*' -type f | head -1)"
-            [ -n "$found" ] || die "yt-dlp reported success but wrote no file"
-            [ "$found" = "$TMP_DL/source.mp4" ] || mv "$found" "$TMP_DL/source.mp4"
+            ytdlp_download "$SHARE_URL" || die "yt-dlp could not download: $SHARE_URL"
         else
             die "no video found on $SHARE_URL, and yt-dlp is not installed to try further — install yt-dlp for broader site support, or pass a local file"
         fi

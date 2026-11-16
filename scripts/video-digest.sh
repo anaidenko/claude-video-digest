@@ -311,6 +311,24 @@ fi
 
 SHARE_URL=""
 LOCAL_INPUT=""
+YOUTUBE_ID=""
+
+# Prints the 11-character id of a link to one YouTube video, or nothing:
+# watch?v= (the v parameter in any position), youtu.be/, shorts/, live/ and
+# embed/, on www., m., music. and youtube-nocookie.com.
+youtube_id() {
+    local url="$1"
+    local id='([A-Za-z0-9_-]{11})([/?#&]|$)'
+    local host='^https?://((www|m|music)\.)?youtube(-nocookie)?\.com/'
+    # Group numbers count every parenthesis to the left of the id.
+    if [[ "$url" =~ ^https?://(www\.)?youtu\.be/$id ]]; then
+        printf '%s' "${BASH_REMATCH[2]}"
+    elif [[ "$url" =~ ${host}(shorts|live|embed)/$id ]]; then
+        printf '%s' "${BASH_REMATCH[5]}"
+    elif [[ "$url" =~ ${host}watch/?\?([^#]*&)?v=$id ]]; then
+        printf '%s' "${BASH_REMATCH[5]}"
+    fi
+}
 
 if [ -f "$SOURCE" ]; then
     LOCAL_INPUT="$(cd "$(dirname "$SOURCE")" && pwd)/$(basename "$SOURCE")"
@@ -322,10 +340,21 @@ if [ -f "$SOURCE" ]; then
     esac
 elif printf '%s' "$SOURCE" | command grep -qE '^https?://'; then
     SHARE_URL="$SOURCE"
-    raw_id="${SOURCE%/}"
-    raw_id="${raw_id##*/}"
-    raw_id="${raw_id%%\?*}"
-    [ -n "$raw_id" ] || raw_id="video"
+    YOUTUBE_ID="$(youtube_id "$SOURCE")"
+    if [ -n "$YOUTUBE_ID" ]; then
+        # The last-path-segment rule below derives "watch" for EVERY watch?v=
+        # link, so a second video would reuse the first one's source.mp4 and
+        # silently digest the wrong video. One id per video, whatever the
+        # link's form. It is lowercased like every URL-derived id: YouTube ids
+        # are case-sensitive, but a collision is negligible, and a
+        # case-insensitive filesystem (macOS) would merge such dirs anyway.
+        raw_id="yt-$YOUTUBE_ID"
+    else
+        raw_id="${SOURCE%/}"
+        raw_id="${raw_id##*/}"
+        raw_id="${raw_id%%\?*}"
+        [ -n "$raw_id" ] || raw_id="video"
+    fi
     SHARE_ID="$(printf '%s' "$raw_id" | tr '[:upper:]' '[:lower:]' \
         | sed -e 's/[^a-z0-9]\{1,\}/-/g' -e 's/^-//' -e 's/-$//' | cut -c1-60)"
     [ -n "$SHARE_ID" ] || SHARE_ID="video"

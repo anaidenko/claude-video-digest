@@ -390,6 +390,7 @@ EXTRACTOR="local"
 # An EXIT trap's return value becomes the script's exit code, so a trailing
 # short-circuit that evaluates false (here: no temp dir to remove, i.e. every
 # cache hit) would exit 1 after a completely successful run.
+# shellcheck disable=SC2329  # invoked by `trap cleanup EXIT`; shellcheck 0.11 does not see that
 cleanup() {
     if [ -n "$TMP_DL" ]; then rm -rf "$TMP_DL"; fi
     if [ -n "$NO_FRAMES_TMP" ]; then rm -rf "$NO_FRAMES_TMP"; fi

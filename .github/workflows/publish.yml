@@ -1,0 +1,137 @@
+name: Publish
+
+# A pushed version tag publishes the npm package and creates the GitHub Release.
+# Cut tags with the /release skill (.claude/skills/release/SKILL.md), which does
+# the version bump, changelog and tag that this workflow checks.
+#
+# npm authenticates through Trusted Publishing (OIDC): no token is stored in this
+# repo. The trusted publisher on npmjs.com names this file, so renaming it breaks
+# publishing until the npm side is reconfigured.
+#
+# Shared with the other anaidenko plugin repos; it reads every name from
+# package.json and .claude-plugin/plugin.json, so keep the copies identical.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  npm:
+    name: npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # the OIDC token npm exchanges for a publish
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      # Trusted Publishing needs npm 11.5.1 or later; an older npm fails with a
+      # misleading 404 rather than an auth error.
+      - run: npm install -g npm@11
+
+      # plugin.json is the only place the version lives. A tag that disagrees
+      # means the bump was skipped, and publishing would ship a mislabelled
+      # package that can never be unpublished after 72 hours.
+      - name: Check the tag matches plugin.json
+        run: |
+          VERSION="$(node -p "require('./.claude-plugin/plugin.json').version")"
+          if [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match plugin.json version $VERSION"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - run: ./test/package-suite.sh
+      - run: ./test/install-suite.sh
+
+      # A re-run after the Release job failed finds its version already on
+      # npm; that must not turn the run red. (The very first npm publish is a
+      # hand-made X.Y.Z-rc.0, so it never collides with a tag's version.)
+      - name: Skip if this version is already on npm
+        id: existing
+        run: |
+          NAME="$(node -p "require('./package.json').name")"
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "::notice::$NAME@$VERSION is already on npm; not publishing it again"
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish
+        if: steps.existing.outputs.published == 'false'
+        run: |
+          npm pkg set version="$VERSION"
+          npm publish
+
+  github-release:
+    name: GitHub Release
+    # Only after npm: a Release that advertises `npx` for a version npm does not
+    # have would send people to an error.
+    needs: npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Create the release
+        run: |
+          TAG="$GITHUB_REF_NAME"
+          VERSION="${TAG#v}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::notice::Release $TAG already exists; leaving it as it is"
+            exit 0
+          fi
+
+          # checkout can leave an annotated tag lightweight; fetch the real one
+          # so its subject ("1.4.0 — what changed") can title the release.
+          git fetch --force --depth=1 origin "refs/tags/$TAG:refs/tags/$TAG"
+          SUBJECT="$(git tag -l --format='%(contents:subject)' "$TAG")"
+          case "$SUBJECT" in
+            "v$VERSION"*) TITLE="$SUBJECT" ;;
+            "$VERSION"*) TITLE="v$SUBJECT" ;;
+            "") TITLE="$TAG" ;;
+            *) TITLE="$TAG — $SUBJECT" ;;
+          esac
+
+          # The CHANGELOG section for this version: from its heading, written
+          # "## 1.4.0 — date" or "## [1.4.0] — date", to the next "## ".
+          # Leading blank lines are dropped, or the notes open with a double gap.
+          SECTION="$(awk -v v="$VERSION" '
+            /^## / { if (found) exit; h = $2; gsub(/[][]/, "", h); if (h == v) { found = 1; next } }
+            found' CHANGELOG.md | sed '/./,$!d')"
+          if [ -z "$SECTION" ]; then
+            echo "::warning::CHANGELOG.md has no section for $VERSION"
+            SECTION="See [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/blob/$TAG/CHANGELOG.md)."
+          fi
+
+          NAME="$(node -p "require('./package.json').name")"
+          DESCRIPTION="$(node -p "require('./package.json').description")"
+          {
+            echo "$DESCRIPTION"
+            echo
+            printf '%s\n' "$SECTION"
+            echo
+            echo "## Install or update"
+            echo
+            echo '```'
+            echo "npx $NAME"
+            echo '```'
+            echo
+            echo "The same by hand, and what to do after: [README → Install](https://github.com/$GITHUB_REPOSITORY#install)."
+            echo
+            echo "Full history: [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/blob/$TAG/CHANGELOG.md) · npm: [$NAME@$VERSION](https://www.npmjs.com/package/$NAME/v/$VERSION)"
+          } > "$RUNNER_TEMP/notes.md"
+
+          gh release create "$TAG" --verify-tag --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md"

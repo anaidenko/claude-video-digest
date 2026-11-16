@@ -1,8 +1,7 @@
 {
-    "name": "claude-video-digest",
+    "name": "@anaidenko/claude-video-digest",
     "description": "Turns any video into a readable digest — a timestamped contact sheet, individual frames, and a transcript grouped under the frame each line was spoken over.",
-    "private": true,
-    "//": "No version field on purpose: .claude-plugin/plugin.json is the single source of truth, and a second copy here would drift.",
+    "//": "No version field on purpose: .claude-plugin/plugin.json is the single source of truth, and a second copy here would drift. publish.yml injects it at publish time; without it, a stray `npm publish` from a checkout fails.",
     "license": "MIT",
     "author": "Andrii Naidenko",
     "homepage": "https://github.com/anaidenko/claude-video-digest",
@@ -10,11 +9,49 @@
         "type": "git",
         "url": "git+https://github.com/anaidenko/claude-video-digest.git"
     },
+    "bugs": "https://github.com/anaidenko/claude-video-digest/issues",
+    "keywords": [
+        "claude-code",
+        "claude-code-plugin",
+        "claude-skill",
+        "video",
+        "screen-recording",
+        "transcription",
+        "whisper",
+        "ffmpeg",
+        "contact-sheet",
+        "loom",
+        "macos",
+        "linux"
+    ],
+    "bin": {
+        "claude-video-digest": "bin/claude-video-digest.js"
+    },
+    "files": [
+        ".claude-plugin/",
+        "skills/",
+        "scripts/",
+        "!**/__pycache__/",
+        "bin/",
+        "CHANGELOG.md"
+    ],
+    "os": [
+        "darwin",
+        "linux"
+    ],
+    "engines": {
+        "node": ">=18"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
     "scripts": {
         "doctor": "./scripts/video-digest.sh doctor",
-        "lint": "command -v shellcheck >/dev/null || { echo 'shellcheck not installed: brew install shellcheck'; exit 1; }; shellcheck scripts/video-digest.sh",
+        "lint": "command -v shellcheck >/dev/null || { echo 'shellcheck not installed: brew install shellcheck'; exit 1; }; shellcheck scripts/video-digest.sh test/install-suite.sh test/package-suite.sh",
         "lint:py": "python3 -m py_compile scripts/lib/*.py",
         "test": "./test/run-tests.sh",
+        "test:install": "./test/install-suite.sh",
+        "test:package": "./test/package-suite.sh",
         "test:docker": "./test/docker-test.sh",
         "docker:build": "docker build -t video-digest .",
         "docker:doctor": "docker run --rm video-digest doctor"

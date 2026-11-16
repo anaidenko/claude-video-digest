@@ -2,7 +2,7 @@
 
 Notable changes per release. Dates are UTC.
 
-## [Unreleased]
+## [1.2.0] — 2026-11-16
 
 ### Added
 

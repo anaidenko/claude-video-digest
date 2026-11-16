@@ -115,6 +115,12 @@ half-populated directory and an error that names the symptom, not the cause.
   `--max-frames 40` on the same cached clip correctly produced 11 then 28 frames, no `--force`
   needed. Recorded here so nobody "fixes" this into the other tool's behaviour by mistake.
 
+## Releasing
+
+`/release` ([.claude/skills/release/SKILL.md](.claude/skills/release/SKILL.md)) cuts a version and
+asks before the push; the tag publishes to npm and creates the GitHub Release through
+`publish.yml`. An npm version is permanent: never `npm unpublish`, never move a tag npm already has.
+
 ## Security notes
 
 - **The scraper is a bounded SSRF surface, not a closed one.** Given a URL, it fetches the page

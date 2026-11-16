@@ -67,5 +67,19 @@ debugging anything here, and worth an entry in the same commit as your fix if yo
 ## Releases
 
 The version in `.claude-plugin/plugin.json` is the single source of truth — the plugin cache
-keys on it, so an unbumped version means updates never reach anyone. Tag with
-`git push --follow-tags` (a bare `--tags` pushes the tag without the commits behind it).
+keys on it, so an unbumped version means updates never reach anyone. `package.json` has no version
+on purpose; `publish.yml` injects it at publish time.
+
+In Claude Code, `/release` walks through it all and asks before it pushes
+([.claude/skills/release/SKILL.md](.claude/skills/release/SKILL.md)). In short: bump the version,
+turn `## [Unreleased]` into `## [X.Y.Z] — date` (UTC), commit `chore(release): vX.Y.Z`, tag
+`vX.Y.Z — <summary>`, and `git push --follow-tags` (a bare `--tags` pushes the tag without the
+commits behind it).
+
+The tag runs [publish.yml](.github/workflows/publish.yml). It checks the tag against `plugin.json`,
+publishes [`@anaidenko/claude-video-digest`](https://www.npmjs.com/package/@anaidenko/claude-video-digest)
+to npm through Trusted Publishing (OIDC, no token in the repo), then creates the GitHub Release
+from the CHANGELOG section. The npm package carries the `npx` installer only; installed copies
+come from the marketplace. Never `npm unpublish` (72-hour window, version numbers are never
+reusable): deprecate a bad version and ship a fix. A failed publish job is re-run
+(`gh run rerun <id> --failed`), never re-tagged.

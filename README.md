@@ -1,10 +1,13 @@
 # claude-video-digest
 
+[![npm](https://img.shields.io/npm/v/@anaidenko/claude-video-digest)](https://www.npmjs.com/package/@anaidenko/claude-video-digest)
+[![npm downloads](https://img.shields.io/npm/dm/@anaidenko/claude-video-digest)](https://www.npmjs.com/package/@anaidenko/claude-video-digest)
+
 Turns any video into a readable digest: a timestamped contact sheet, individual frames, and a
 transcript grouped under the frame each line was spoken over. Claude can't play video — this
 gives it something it can actually read.
 
-![Example contact sheet](docs/hero-contact-sheet.jpg)
+![Example contact sheet](https://raw.githubusercontent.com/anaidenko/claude-video-digest/main/docs/hero-contact-sheet.jpg)
 
 _Ten frames from a 33-second clip ([Big Buck Bunny](https://www.bigbuckbunny.org), CC BY 3.0),
 each tile timestamped._
@@ -24,7 +27,7 @@ frame_005.jpg  [0:17 - 0:21]
 ```
 
 A complete run — sheet, every frame, transcript, `meta.json` — is in
-[`docs/example-output/`](docs/example-output/).
+[`docs/example-output/`](https://github.com/anaidenko/claude-video-digest/tree/main/docs/example-output).
 
 ## Use
 
@@ -73,6 +76,14 @@ source.mp4          kept or deleted depending on keepSource
 ## Install
 
 ```bash
+npx @anaidenko/claude-video-digest
+```
+
+That adds the marketplace and installs the plugin, or updates it if it is already installed,
+then says which of the tools below are missing. The npm package is only the installer: the plugin
+itself comes from the marketplace either way. By hand, it is two commands:
+
+```bash
 claude plugin marketplace add anaidenko/claude-plugins
 claude plugin install claude-video-digest@anaidenko
 ```
@@ -96,6 +107,8 @@ ffmpeg`) — before any download or extraction runs, so a broken environment nev
 half-written output directory.
 
 ### Update
+
+Run `npx @anaidenko/claude-video-digest` again, or by hand:
 
 ```bash
 claude plugin marketplace update anaidenko
@@ -228,4 +241,4 @@ with, not arbitrary URLs.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Contributions welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
+MIT — see [LICENSE](LICENSE). Contributions welcome; see [CONTRIBUTING.md](https://github.com/anaidenko/claude-video-digest/blob/main/CONTRIBUTING.md).

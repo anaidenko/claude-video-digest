@@ -450,10 +450,16 @@ ytdlp_download() {
     if ! command -v deno >/dev/null 2>&1 && command -v node >/dev/null 2>&1; then
         args+=(--js-runtimes node)
     fi
+    # Title and length go to the user before the download starts (yt-dlp's
+    # stdout goes to stderr here, where every other note goes). Date and title
+    # go to a file for apply_known_meta: parsing stdout mixed with progress
+    # output is fragile, and --print would make it quiet anyway.
+    args+=(--print 'before_dl:  %(title)s (%(duration>%H:%M:%S)s)'
+        --print-to-file 'before_dl:%(.{title,upload_date,duration})j' "$TMP_DL/yt-dlp-meta.json")
     # The HTML a player page served the scrape must not be mistaken for
     # yt-dlp's file by the lookup below.
     rm -f "$TMP_DL/source.mp4"
-    if ! yt-dlp "${args[@]}" -o "$TMP_DL/source.%(ext)s" "$url" 2>"$err"; then
+    if ! yt-dlp "${args[@]}" -o "$TMP_DL/source.%(ext)s" "$url" >&2 2>"$err"; then
         YTDLP_ERROR="$(command grep '^ERROR:' "$err" | tail -1 | sed 's/^ERROR: *//' || true)"
         [ -n "$YTDLP_ERROR" ] || YTDLP_ERROR="$(tail -1 "$err" 2>/dev/null || true)"
         [ -n "$YTDLP_ERROR" ] || YTDLP_ERROR="no reason given"
@@ -462,6 +468,53 @@ ytdlp_download() {
     found="$(find "$TMP_DL" -maxdepth 1 -name 'source.*' -type f | head -1)"
     [ -n "$found" ] || die "yt-dlp reported success but wrote no file"
     [ "$found" = "$TMP_DL/source.mp4" ] || mv "$found" "$TMP_DL/source.mp4"
+    apply_known_meta "$TMP_DL/yt-dlp-meta.json"
+}
+
+# Prints three lines: a recorded date, where it came from, and a title, each
+# empty when unknown. Reads either yt-dlp's --print-to-file record (upload
+# date, title) or an earlier run's meta.json, whose date is kept only when the
+# file itself cannot give it back (an upload date, a CDN filename). Never
+# fails: this is a nicety, not a dependency.
+known_meta() {
+    [ -s "$1" ] || return 0
+    python3 - "$1" 2>/dev/null <<'PY' || true
+import json, re, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        m, _ = json.JSONDecoder().raw_decode(fh.read().lstrip())
+    assert isinstance(m, dict)
+except Exception:
+    sys.exit(0)
+date = src = ""
+if "recorded_source" in m:
+    if m.get("recorded_source") in ("yt-dlp-upload-date", "cdn-filename"):
+        date, src = str(m.get("recorded") or ""), m["recorded_source"]
+else:
+    d = str(m.get("upload_date") or "")
+    if re.fullmatch(r"\d{8}", d):
+        date, src = "%s-%s-%s" % (d[:4], d[4:6], d[6:]), "yt-dlp-upload-date"
+if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+    date = src = ""
+print(date)
+print(src)
+print(" ".join(str(m.get("title") or "").split()))
+PY
+}
+
+VIDEO_TITLE=""
+apply_known_meta() {
+    local lines date src title
+    lines="$(known_meta "$1")"
+    date="$(printf '%s\n' "$lines" | sed -n 1p)"
+    src="$(printf '%s\n' "$lines" | sed -n 2p)"
+    title="$(printf '%s\n' "$lines" | sed -n 3p)"
+    if [ -n "$date" ] && [ -n "$src" ]; then
+        RECORDED="$date"
+        DATE_SOURCE="$src"
+    fi
+    if [ -n "$title" ]; then VIDEO_TITLE="$title"; fi
+    return 0
 }
 
 SOURCE_MP4=""
@@ -486,6 +539,10 @@ trap cleanup EXIT
 if [ -n "$TARGET_DIR" ] && [ -f "$TARGET_DIR/source.mp4" ] && [ "$FORCE" -eq 0 ]; then
     SOURCE_MP4="$TARGET_DIR/source.mp4"
     note "reusing cached download: $TARGET_DIR"
+    # Nothing is downloaded, so what the download once said (an upload date,
+    # a title) survives only in the last run's meta.json, which this run is
+    # about to overwrite.
+    apply_known_meta "$TARGET_DIR/meta.json"
 else
     TMP_DL="$(mktemp -d)"
     if [ -n "$LOCAL_INPUT" ]; then
@@ -597,6 +654,16 @@ fi
 DURATION="$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$SOURCE_MP4" 2>/dev/null || true)"
 case "$DURATION" in ''|N/A) die "could not read duration — is this a video file?" ;; esac
 
+# A long video (a YouTube talk runs 30-90 min) is digested as it is, but the
+# reader should know before the slow part starts that the frames will be
+# sparse and a transcript slow.
+LONG_VIDEO_SEC=900
+if awk -v d="$DURATION" -v l="$LONG_VIDEO_SEC" 'BEGIN{exit !(d > l)}'; then
+    note "$(awk -v d="$DURATION" -v c="${MAX_FRAMES:-$FRAMES_CEILING}" 'BEGIN{
+        printf "long video (%d min): %d frames at most, about one every %.1f min (--max-frames raises that); a transcript will take a while", int(d/60 + 0.5), c, d/60/c
+    }')"
+fi
+
 if [ -z "$RECORDED" ]; then
     created="$(ffprobe -v error -show_entries format_tags=creation_time -of default=nw=1:nk=1 "$SOURCE_MP4" 2>/dev/null || true)"
     RECORDED="$(printf '%s' "$created" | command grep -oE '^[0-9]{4}-[0-9]{2}-[0-9]{2}' || true)"
@@ -616,7 +683,8 @@ fi
 # separator.
 name="$RECORDED"
 ticket_slug="$(slugify "$TICKET")"
-title_slug="$(slugify "$TITLE")"
+# The video's own title (from yt-dlp) names the directory when --title does not.
+title_slug="$(slugify "${TITLE:-$VIDEO_TITLE}")"
 [ -n "$ticket_slug" ] && name="$name-$ticket_slug"
 name="$name-$SHARE_ID"
 [ -n "$title_slug" ] && name="$name-$title_slug"
@@ -906,7 +974,7 @@ esac
 DEDUPED_JSON=false
 [ "$DEDUPE" -eq 1 ] && DEDUPED_JSON=true
 SHARE_ID="$SHARE_ID" SHARE_URL="${SHARE_URL:-}" CDN_URL="${CDN_URL:-}" \
-EXTRACTOR="$EXTRACTOR" \
+EXTRACTOR="$EXTRACTOR" VIDEO_TITLE="$VIDEO_TITLE" \
 RECORDED="$RECORDED" DATE_SOURCE="$DATE_SOURCE" DURATION="$DURATION" \
 KEPT="$kept" INTERVAL="$INTERVAL" SAMPLE_FPS="$SAMPLE_FPS" \
 DEDUPED="$DEDUPED_JSON" RAW_COUNT="$RAW_COUNT" TRANSCRIPT_STATE="$TRANSCRIPT_STATE" \
@@ -916,6 +984,7 @@ import json, os, sys
 e = os.environ
 json.dump({
     "id": e["SHARE_ID"],
+    "title": e["VIDEO_TITLE"],
     "source_url": e["SHARE_URL"],
     "resolved_url": e["CDN_URL"],
     "extractor": e["EXTRACTOR"],

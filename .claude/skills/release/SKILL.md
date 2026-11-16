@@ -102,10 +102,16 @@ The run can take a few seconds to appear: repeat the `list` until it does.
 ## 7. Verify the result, not the log
 
 ```bash
-npm view @anaidenko/claude-video-digest version                 # X.Y.Z (the registry can lag a minute)
+npm view @anaidenko/claude-video-digest version                 # X.Y.Z; see the note below if it is missing
 npm view @anaidenko/claude-video-digest@X.Y.Z dist.attestations # non-empty: provenance from CI
 gh release view vX.Y.Z --json name,url
 ```
+
+**A missing version is not yet a failure.** npm can answer "Your package is
+being processed" even to a CI publish, and on a young package the version took
+about 4 minutes to appear (1.2.0 of claude-video-digest, 2026-11-16). Poll
+`npm view` for up to 10 minutes before suspecting the run. Do not re-run it:
+the version is already taken.
 
 A version published by hand has no attestations. That is expected for the
 first-publish `rc.0`, and a red flag for any other version.

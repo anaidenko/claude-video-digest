@@ -202,7 +202,12 @@ function nextSteps() {
     }
     const optional = ['whisper', 'yt-dlp'].filter(cmd => !onPath(cmd));
     if (optional.length) {
-        steps.push(`Optional, not found: ${optional.join(', ')} (whisper: transcripts; yt-dlp: Loom, YouTube and more).`);
+        steps.push(`Optional, not found: ${optional.join(', ')} (whisper: transcripts; yt-dlp: YouTube, and sites the built-in scraper cannot read).`);
+    }
+    // A YouTube link has no fallback: without yt-dlp it is refused outright.
+    if (!onPath('yt-dlp')) {
+        const ytdlp = process.platform === 'darwin' ? 'brew install yt-dlp deno' : 'pipx install yt-dlp';
+        steps.push(`YouTube links need yt-dlp: ${ytdlp}`);
     }
     return steps;
 }

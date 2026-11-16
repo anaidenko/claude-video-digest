@@ -652,6 +652,24 @@ check "a video over 15 minutes gets a warning" said "long video"
 run_tool with_stubs "$WORK/moving.mp4" --output "$WORK/short" --no-contact-sheet --transcript never
 check "...a short one does not" not said "long video"
 
+# --- doctor: what YouTube needs (plan step 7) ---------------------------------
+# A stale yt-dlp is the likeliest YouTube failure (YouTube breaks old ones
+# regularly), so doctor shows its version; and a missing JS runtime degrades
+# YouTube silently, so doctor names the one yt-dlp will get.
+
+printf '\ndoctor\n'
+run_tool with_stubs doctor
+check "doctor shows the yt-dlp version" said '\[ok\] *yt-dlp .*2026\.07\.04'
+check "...and that YouTube links need it" said '\[ok\] *yt-dlp .*YouTube'
+run_tool without_ytdlp doctor
+assert_eq 0 "$RC" "doctor without yt-dlp, deno or node still exits 0 (all optional)"
+check "...says how to install yt-dlp" said '\[absent\] *yt-dlp .*install yt-dlp'
+check "...and that no JS runtime is there" said '\[absent\] *deno '
+run_tool node_no_deno doctor
+check "doctor names node as the JS runtime when deno is missing" said '\[ok\] *node '
+run_tool node_and_deno doctor
+check "doctor names deno when it is there" said '\[ok\] *deno '
+
 # --- summary ---------------------------------------------------------------
 
 printf '\n%s passed, %s failed\n\n' "$PASS" "$FAIL"

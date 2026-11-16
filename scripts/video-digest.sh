@@ -88,6 +88,13 @@ need() {
     esac
 }
 
+ytdlp_install_hint() {
+    case "$(uname -s)" in
+        Darwin) printf 'brew install yt-dlp deno' ;;
+        *) printf 'pipx install yt-dlp (or your distro'"'"'s package)' ;;
+    esac
+}
+
 # --- doctor subcommand --------------------------------------------------
 # Non-interactive: prints what's present and what's missing, for pasting into
 # an issue. Distinct from an installer — this tool has no interactive install
@@ -111,7 +118,25 @@ run_doctor() {
     check python3 required "meta.json and transcript grouping"
     check curl optional "fetching a URL input"
     check whisper optional "transcription (skipped without it, not an error)"
-    check yt-dlp optional "sites beyond the built-in scraper (Loom, YouTube, Vimeo, ...)"
+    # A YouTube link has no fallback without yt-dlp, and a stale yt-dlp is the
+    # likeliest YouTube failure (YouTube breaks old versions regularly), so
+    # the version is shown.
+    if command -v yt-dlp >/dev/null 2>&1; then
+        printf '  [ok]      %-10s %s (%s) — YouTube links, and sites the scraper cannot read\n' \
+            yt-dlp "$(command -v yt-dlp)" "$(yt-dlp --version 2>/dev/null || echo 'version unknown')"
+    else
+        printf '  [absent]  %-10s optional — YouTube links need it (%s); also sites the scraper cannot read\n' \
+            yt-dlp "$(ytdlp_install_hint)"
+    fi
+    # yt-dlp needs a JS runtime for YouTube. deno is its default; the script
+    # points it at node when deno is missing (ytdlp_download).
+    if command -v deno >/dev/null 2>&1; then
+        printf '  [ok]      %-10s %s — JS runtime for YouTube via yt-dlp\n' deno "$(command -v deno)"
+    elif command -v node >/dev/null 2>&1; then
+        printf '  [ok]      %-10s %s — JS runtime for YouTube via yt-dlp (deno not found)\n' node "$(command -v node)"
+    else
+        printf '  [absent]  %-10s optional — JS runtime for YouTube via yt-dlp (node works too); without one, extraction is deprecated and formats may be missing\n' deno
+    fi
 
     if command -v ffmpeg >/dev/null 2>&1; then
         # Capture first, then match — same reason as the real probe below:
@@ -332,13 +357,6 @@ youtube_id() {
 
 is_youtube_host() {
     [[ "$1" =~ ^https?://([A-Za-z0-9-]+\.)*(youtube(-nocookie)?\.com|youtu\.be)([:/?#]|$) ]]
-}
-
-ytdlp_install_hint() {
-    case "$(uname -s)" in
-        Darwin) printf 'brew install yt-dlp deno' ;;
-        *) printf 'pipx install yt-dlp (or your distro'"'"'s package)' ;;
-    esac
 }
 
 if [ -f "$SOURCE" ]; then

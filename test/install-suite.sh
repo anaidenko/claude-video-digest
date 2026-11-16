@@ -152,6 +152,15 @@ run PATH="$STUB_BIN"
 check "no tools: still exits 0 (the plugin did install)" "0" "$CODE"
 contains "no tools: names the missing required ones" "Required, not found: ffmpeg, ffprobe, python3" "$OUT"
 contains "no tools: names the missing optional ones" "Optional, not found: whisper, yt-dlp" "$OUT"
+# YouTube has no fallback without yt-dlp, so its absence gets its own line,
+# with this platform's install command.
+case "$(uname -s)" in
+    Darwin) YTDLP_INSTALL="brew install yt-dlp deno" ;;
+    *) YTDLP_INSTALL="pipx install yt-dlp" ;;
+esac
+contains "no tools: says YouTube links need yt-dlp, and how to get it" "YouTube links need yt-dlp: $YTDLP_INSTALL" "$OUT"
+run
+lacks "all tools present: no YouTube note" "YouTube links need" "$OUT"
 
 : >"$STUB_LOG"
 OUT="$(env PATH="$EMPTY_BIN" "$NODE" "$INSTALLER" 2>&1 </dev/null)"

@@ -8,11 +8,12 @@ description: Use when cutting a new version of claude-video-digest (asked to rel
 A release is one commit plus one annotated tag on `main`. Pushing the tag runs
 [publish.yml](../../../.github/workflows/publish.yml), which publishes
 `@anaidenko/claude-video-digest` to npm and then creates the GitHub Release.
-Marketplace users get the new version through `plugin.json`.
+Marketplace users get it from npm too: the marketplace installs the package's
+`latest`, so the release reaches them once that run has published it.
 
 Two actions here cannot be undone: the push, and (first release on npm only)
-the hand-published release candidate. An npm version is permanent, and installed
-copies pick up a bump on `main`. **Ask before each of them**, and show exactly
+the hand-published release candidate. An npm version is permanent, and whatever
+becomes `latest` goes to every installed copy. **Ask before each of them**, and show exactly
 what will go out. Everything else is local and can be undone.
 
 ## 1. Preflight
@@ -126,7 +127,7 @@ Then report the Release and npm links, plus the update line for users:
 `claude plugin marketplace update anaidenko && claude plugin update claude-video-digest@anaidenko`.
 
 The marketplace repo (`anaidenko/claude-plugins`) needs no change unless the
-plugin's description or repo URL changed.
+plugin's description or npm package name changed.
 
 ## When the Publish run fails
 
@@ -153,8 +154,7 @@ terminal, then check the result yourself with `npm view`.
 
 This runs after step 2, so the version is known. `publish.yml` must already be
 on `origin/main`, because npm checks that it exists. Do not push the release
-commit early: once `plugin.json` changes on `main`, the marketplace offers the
-version before npm or the Release has it.
+commit early: it goes out together with its tag in step 6.
 
 1. **Ask first.** Show the user `X.Y.Z-rc.0` and say it stays in npm's version
    list for good, marked as a pre-release.
@@ -163,7 +163,9 @@ version before npm or the Release has it.
    npm pkg set version=X.Y.Z-rc.0 && npm publish --tag next; git checkout package.json && git status --porcelain
    ```
    The rc is built from the pre-bump tree. Its `plugin.json` still says the
-   previous version, which is harmless: npm does not deliver the plugin.
+   previous version, which is harmless: it goes out under `next`, and the
+   marketplace installs only `latest`. Never drop `--tag next`, though: without
+   it the rc becomes `latest` and reaches every marketplace user.
 
    **Expect a placeholder first.** npm answers "Your package is being
    processed", and for about 2 minutes `npm view … versions` lists only

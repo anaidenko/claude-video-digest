@@ -79,7 +79,8 @@ commits behind it).
 The tag runs [publish.yml](.github/workflows/publish.yml). It checks the tag against `plugin.json`,
 publishes [`@anaidenko/claude-video-digest`](https://www.npmjs.com/package/@anaidenko/claude-video-digest)
 to npm through Trusted Publishing (OIDC, no token in the repo), then creates the GitHub Release
-from the CHANGELOG section. The npm package carries the `npx` installer only; installed copies
-come from the marketplace. Never `npm unpublish` (72-hour window, version numbers are never
+from the CHANGELOG section. The npm package is both the `npx` installer and the installed plugin:
+the marketplace installs its `latest`, so a release reaches users once this run has published it,
+and `files` in `package.json` must carry everything the plugin runs. Never `npm unpublish` (72-hour window, version numbers are never
 reusable): deprecate a bad version and ship a fix. A failed publish job is re-run
 (`gh run rerun <id> --failed`), never re-tagged.

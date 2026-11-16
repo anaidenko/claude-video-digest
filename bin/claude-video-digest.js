@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Installs this plugin into Claude Code, or updates it if it is already
-// installed.
+// Installs this plugin into Claude Code, updates it, or removes it.
 //
-//   npx @anaidenko/claude-video-digest
+//   npx @anaidenko/claude-video-digest               install, or update if installed
+//   npx @anaidenko/claude-video-digest --uninstall   remove it and what it left behind
 //   npx @anaidenko/claude-video-digest --help
 //
 // It runs the same `claude plugin` commands the README lists, so the plugin
@@ -14,12 +14,14 @@
 // apply: it runs once, by hand, and a failure nobody sees is a failure
 // nobody fixes. Every failure exits non-zero and says why.
 //
-// Everything above nextSteps() is shared with the other anaidenko plugins'
-// installers and reads its names from the manifests, so keep it identical.
+// Everything above the "This plugin" section is shared with the other
+// anaidenko plugins' installers and reads its names from the manifests, so
+// keep it identical across them.
 'use strict';
 
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..');
@@ -38,11 +40,14 @@ function fail(message) {
 }
 
 function usage() {
-    process.stdout.write(`Usage: npx ${PACKAGE.name}
+    process.stdout.write(`Usage: npx ${PACKAGE.name} [--uninstall]
 
 Installs the ${PLUGIN} plugin into Claude Code, or updates it if it is
 already installed. It adds the ${MARKETPLACE_REPO} marketplace when missing,
 then runs \`claude plugin install\` (or \`update\`).
+
+  --uninstall   Remove the plugin, and the files it keeps outside Claude Code.
+                Your own config is left in place, and its path is printed.
 
 Details: ${README}
 `);
@@ -95,21 +100,20 @@ function onPath(cmd) {
         .some(d => d && fs.existsSync(path.join(d, cmd)));
 }
 
-function main() {
-    const args = process.argv.slice(2);
-    if (args.includes('--help') || args.includes('-h')) {
-        usage();
-        return;
-    }
-    if (args.length > 0) {
-        usage();
-        process.exit(1);
-    }
+const home = () => os.homedir();
+const tilde = p => (p.startsWith(home() + path.sep) ? `~${p.slice(home().length)}` : p);
 
-    if (process.platform === 'win32') {
-        fail(`${PLUGIN} supports macOS and Linux only. See ${README}`);
-    }
+function installedEntries() {
+    const plugins = claudeJson(['plugin', 'list']);
+    return Array.isArray(plugins) ? plugins.filter(p => p.id === PLUGIN_ID) : [];
+}
 
+function report(headline, lines) {
+    process.stdout.write(`\n${headline}\n` +
+        lines.map(line => `  - ${line}`).join('\n') + `\n\nMore: ${README}\n`);
+}
+
+function install() {
     const marketplaces = claudeJson(['plugin', 'marketplace', 'list']);
     const entry = Array.isArray(marketplaces) && marketplaces.find(m => m.name === MARKETPLACE);
 
@@ -129,20 +133,66 @@ function main() {
         claude(['plugin', 'marketplace', 'update', MARKETPLACE]);
     }
 
-    const plugins = claudeJson(['plugin', 'list']);
-    const installed = Array.isArray(plugins) && plugins.some(p => p.id === PLUGIN_ID);
-
+    const installed = installedEntries().length > 0;
     claude(['plugin', installed ? 'update' : 'install', PLUGIN_ID]);
 
     // `claude plugin update` succeeds whether or not there was anything newer,
     // so claim only what is true either way.
-    const done = installed ? `${PLUGIN_ID} is installed and up to date.` : `Installed ${PLUGIN_ID}.`;
-    process.stdout.write(`\n${done}\n` +
-        nextSteps().map(line => `  - ${line}`).join('\n') + `\n\nMore: ${README}\n`);
+    report(installed ? `${PLUGIN_ID} is installed and up to date.` : `Installed ${PLUGIN_ID}.`,
+        nextSteps());
 }
 
-// What this plugin needs after install. The skill checks the same tools at
-// run time and fails before doing any work; this only says so earlier.
+function uninstall() {
+    const entries = installedEntries();
+    const user = entries.filter(p => (p.scope || 'user') === 'user');
+    // A project or local install belongs to that project's settings; removing
+    // it from here would need that project's directory, so it is only named.
+    const elsewhere = entries.filter(p => p.scope && p.scope !== 'user');
+
+    if (user.length) claude(['plugin', 'uninstall', PLUGIN_ID]);
+
+    const lines = [];
+    for (const dir of leftovers()) {
+        if (!fs.existsSync(dir)) continue;
+        fs.rmSync(dir, { recursive: true, force: true });
+        lines.push(`Removed ${tilde(dir)}`);
+    }
+    for (const file of keptFiles().filter(f => fs.existsSync(f))) {
+        lines.push(`Kept your config: ${tilde(file)} (delete it if you no longer need it)`);
+    }
+    for (const p of elsewhere) {
+        lines.push(`Still installed with --scope ${p.scope}${p.projectPath ? ` in ${tilde(p.projectPath)}` : ''}: ` +
+            `run \`claude plugin uninstall ${PLUGIN_ID} --scope ${p.scope}\` there`);
+    }
+    lines.push(`The ${MARKETPLACE} marketplace stays, for its other plugins; ` +
+        `\`claude plugin marketplace remove ${MARKETPLACE}\` removes it`);
+    if (user.length) lines.push('Restart Claude Code, or run /reload-plugins in an open session.');
+
+    report(user.length ? `Uninstalled ${PLUGIN_ID}.` : `${PLUGIN_ID} was not installed for your user.`, lines);
+}
+
+function main() {
+    const args = process.argv.slice(2);
+    if (args.includes('--help') || args.includes('-h')) {
+        usage();
+        return;
+    }
+    const removing = args.length === 1 && args[0] === '--uninstall';
+    if (args.length > 0 && !removing) {
+        usage();
+        process.exit(1);
+    }
+    if (process.platform === 'win32') {
+        fail(`${PLUGIN} supports macOS and Linux only. See ${README}`);
+    }
+    if (removing) uninstall();
+    else install();
+}
+
+// ── This plugin ──────────────────────────────────────────────────────────────
+
+// What it needs after install. The skill checks the same tools at run time and
+// fails before doing any work; this only says so earlier.
 function nextSteps() {
     const steps = ['Restart Claude Code, or run /reload-plugins in an open session.'];
     const missing = ['ffmpeg', 'ffprobe', 'python3'].filter(cmd => !onPath(cmd));
@@ -155,6 +205,18 @@ function nextSteps() {
         steps.push(`Optional, not found: ${optional.join(', ')} (whisper: transcripts; yt-dlp: Loom, YouTube and more).`);
     }
     return steps;
+}
+
+// Directories it keeps outside Claude Code, removed by --uninstall. Digests
+// go to the OS temp dir or an --output the user chose, so there are none.
+function leftovers() {
+    return [];
+}
+
+// The user's own files: never removed, only pointed out.
+function keptFiles() {
+    const config = process.env.XDG_CONFIG_HOME || path.join(home(), '.config');
+    return [path.join(config, 'video-digest', 'config.json')];
 }
 
 main();

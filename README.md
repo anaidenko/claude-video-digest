@@ -124,13 +124,13 @@ keeps the old code until you do.
 ### Uninstall
 
 ```bash
-claude plugin uninstall claude-video-digest@anaidenko
-claude plugin marketplace remove anaidenko
+npx @anaidenko/claude-video-digest --uninstall
 ```
 
-The second line is optional — only needed if you also want to stop tracking this marketplace
-(e.g. before switching to the project-level install below, or if you registered it from a local
-path by mistake and want to re-add it from GitHub).
+It keeps your config (`~/.config/video-digest/config.json`) and prints its path. By hand, it is
+`claude plugin uninstall claude-video-digest@anaidenko`. Add
+`claude plugin marketplace remove anaidenko` only if you also want to stop tracking the
+marketplace, e.g. before switching to the project-level install below.
 
 ### For a team — install with the project, not per developer
 

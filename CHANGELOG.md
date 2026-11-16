@@ -12,6 +12,8 @@ Notable changes per release. Dates are UTC.
   itself still comes from the marketplace, so an install made this way updates like any other. If
   an older install left a marketplace named `anaidenko` that points somewhere else, the installer
   leaves it alone and prints the two commands that replace it.
+- **Uninstall with one command:** `npx @anaidenko/claude-video-digest --uninstall`. Your config
+  file is kept, and its path is printed.
 - **On npm** as [`@anaidenko/claude-video-digest`](https://www.npmjs.com/package/@anaidenko/claude-video-digest).
   Every release is published from CI with npm provenance, and gets a GitHub Release.
 

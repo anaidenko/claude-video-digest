@@ -1,6 +1,6 @@
 {
     "name": "@anaidenko/claude-video-digest",
-    "description": "Turns any video into a readable digest — a timestamped contact sheet, individual frames, and a transcript grouped under the frame each line was spoken over.",
+    "description": "Lets Claude Code watch videos — screen recordings, share links, any video file — as a timestamped contact sheet and a transcript grouped under the frame each line was spoken over.",
     "//": "No version field on purpose: .claude-plugin/plugin.json is the single source of truth, and a second copy here would drift. publish.yml injects it at publish time; without it, a stray `npm publish` from a checkout fails.",
     "license": "MIT",
     "author": "Andrii Naidenko",
@@ -13,14 +13,20 @@
     "keywords": [
         "claude-code",
         "claude-code-plugin",
+        "claude-code-skill",
         "claude-skill",
+        "claude",
         "video",
+        "video-analysis",
+        "video-transcript",
         "screen-recording",
+        "transcript",
         "transcription",
         "whisper",
         "ffmpeg",
         "contact-sheet",
         "loom",
+        "youtube",
         "macos",
         "linux"
     ],

@@ -120,6 +120,10 @@ half-populated directory and an error that names the symptom, not the cause.
 `/release` ([.claude/skills/release/SKILL.md](.claude/skills/release/SKILL.md)) cuts a version and
 asks before the push; the tag publishes to npm and creates the GitHub Release through
 `publish.yml`. An npm version is permanent: never `npm unpublish`, never move a tag npm already has.
+- **`npx @anaidenko/claude-video-digest` inside this repo fails with `command not found`.** npx sees
+  that the current project *is* that package, so it looks for the bin in the empty local
+  `node_modules/.bin` instead of the registry. Users are unaffected. Try the published installer
+  from another directory, or with an explicit version, which always fetches.
 
 ## Security notes
 

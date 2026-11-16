@@ -438,11 +438,22 @@ slugify() {
 # members-only videos explain themselves.
 YTDLP_ERROR=""
 ytdlp_download() {
-    local url="$1" err="$TMP_DL/yt-dlp.stderr" found
+    local url="$1" err="$TMP_DL/yt-dlp.stderr" found args
+    # --no-playlist: given a link naming both a video and a playlist (&list=),
+    # yt-dlp's default is the WHOLE playlist. The format cap: the sheet's cells
+    # are budgeted at 480k px, so anything above 720p is bandwidth spent on
+    # detail the sheet throws away.
+    args=(--no-update --no-playlist --no-progress -f 'bv*[height<=720]+ba/b[height<=720]/b')
+    # YouTube needs a JS runtime, and yt-dlp enables only deno by default.
+    # Without one it still downloads, but warns that extraction without one
+    # is deprecated and formats may be missing. node is far more common.
+    if ! command -v deno >/dev/null 2>&1 && command -v node >/dev/null 2>&1; then
+        args+=(--js-runtimes node)
+    fi
     # The HTML a player page served the scrape must not be mistaken for
     # yt-dlp's file by the lookup below.
     rm -f "$TMP_DL/source.mp4"
-    if ! yt-dlp --no-progress -o "$TMP_DL/source.%(ext)s" "$url" 2>"$err"; then
+    if ! yt-dlp "${args[@]}" -o "$TMP_DL/source.%(ext)s" "$url" 2>"$err"; then
         YTDLP_ERROR="$(command grep '^ERROR:' "$err" | tail -1 | sed 's/^ERROR: *//' || true)"
         [ -n "$YTDLP_ERROR" ] || YTDLP_ERROR="$(tail -1 "$err" 2>/dev/null || true)"
         [ -n "$YTDLP_ERROR" ] || YTDLP_ERROR="no reason given"

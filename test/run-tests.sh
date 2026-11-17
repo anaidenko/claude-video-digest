@@ -670,6 +670,25 @@ assert_eq "Stub Video Title" "$(meta_field "$WORK/yt-meta" title)" "...and the t
 run_tool with_stubs "$YT_URL" --output "$WORK/yt-meta-title" --title "My Label" --no-contact-sheet --transcript never
 check "--title still names the directory" test -d "$WORK/yt-meta-title/videos/2024-01-02-yt-jnqxac9ivrw-my-label"
 
+# A title is free text, and the cache lookup globs *-<id>-*: a YouTube video
+# titled "Product Demo Video" was handed to a local demo.mp4 as its cache,
+# exit 0 (found in review). The glob may match; meta.json says whose it is.
+printf '{"title": "Product Demo Video", "upload_date": "20240102", "duration": 10.0}\n' > "$WORK/demo-title-meta.json"
+export YTDLP_STUB_META="$WORK/demo-title-meta.json"
+run_tool with_stubs "$YT_URL" --output "$WORK/title-collide" --no-contact-sheet --transcript never
+unset YTDLP_STUB_META
+cp "$WORK/moving.mp4" "$WORK/demo.mp4"
+run_tool with_stubs "$WORK/demo.mp4" --output "$WORK/title-collide" --no-contact-sheet --transcript never
+assert_eq 0 "$RC" "a local demo.mp4 next to a video titled \"Product Demo Video\" digests"
+check "...without taking that video as its cache" not said "reusing cached download"
+assert_eq 2 "$(dir_count "$WORK/title-collide")" "...each in its own directory"
+
+# A cache hit must not rename away a label the user gave with --title, just
+# because the video's own title is longer (found in review).
+run_tool with_stubs "$YT_URL" --output "$WORK/label" --title "bug 42" --no-contact-sheet --transcript never
+run_tool with_stubs "$YT_URL" --output "$WORK/label" --no-contact-sheet --transcript never
+check "a later run without --title keeps the user's label" test -d "$WORK/label/videos/2024-01-02-yt-jnqxac9ivrw-bug-42"
+
 : > "$WORK/empty-meta.json"
 export YTDLP_STUB_META="$WORK/empty-meta.json"
 run_tool with_stubs "$YT_URL" --output "$WORK/yt-nometa" --no-contact-sheet --transcript never

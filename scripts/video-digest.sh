@@ -415,15 +415,34 @@ shopt -s nullglob
 # caller would then read a plain non-zero, take its "no match" branch and
 # carry on with exit 0, which silently defeats both the archived/ guard and
 # existing-dir reuse.
+#
+# ⚠️ The glob alone is not proof: a title is free text, so a YouTube digest
+# named "…-yt-<id>-product-demo-video" matches `*-demo-*` and was handed to a
+# local demo.mp4 as its cache, exit 0. A hit whose meta.json names another id
+# is dropped; one with no readable meta.json (an interrupted run) still counts.
+meta_id() {
+    [ -f "$1" ] || return 0
+    python3 -c 'import json, sys
+try:
+    print(json.load(open(sys.argv[1], encoding="utf-8")).get("id", ""))
+except Exception:
+    pass' "$1" 2>/dev/null || true
+}
+
 find_dir() {
-    local base="$1" hits=()
+    local base="$1" hits=() matches=() h id
     hits=("$base"/*-"$SHARE_ID" "$base"/*-"$SHARE_ID"-*)
-    [ ${#hits[@]} -eq 0 ] && return 1
-    if [ ${#hits[@]} -gt 1 ]; then
-        printf '%s\n' "${hits[@]}" >&2
+    for h in ${hits[@]+"${hits[@]}"}; do
+        id="$(meta_id "$h/meta.json")"
+        if [ -n "$id" ] && [ "$id" != "$SHARE_ID" ]; then continue; fi
+        matches+=("$h")
+    done
+    [ ${#matches[@]} -eq 0 ] && return 1
+    if [ ${#matches[@]} -gt 1 ]; then
+        printf '%s\n' "${matches[@]}" >&2
         return 2
     fi
-    printf '%s' "${hits[0]}"
+    printf '%s' "${matches[0]}"
 }
 
 if [ "$FORCE" -eq 0 ] && [ -d "$ARCHIVE_DIR" ]; then
@@ -716,8 +735,12 @@ fi
 # separator.
 name="$RECORDED"
 ticket_slug="$(slugify "$TICKET")"
-# The video's own title (from yt-dlp) names the directory when --title does not.
-title_slug="$(slugify "${TITLE:-$VIDEO_TITLE}")"
+# The video's own title (from yt-dlp) names a NEW directory when --title does
+# not. An existing one keeps its name: it may carry the user's --title label,
+# which the longer video title would otherwise rename away on the next run.
+title_text="$TITLE"
+if [ -z "$title_text" ] && [ -z "$TARGET_DIR" ]; then title_text="$VIDEO_TITLE"; fi
+title_slug="$(slugify "$title_text")"
 [ -n "$ticket_slug" ] && name="$name-$ticket_slug"
 name="$name-$SHARE_ID"
 [ -n "$title_slug" ] && name="$name-$title_slug"

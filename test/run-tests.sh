@@ -399,9 +399,23 @@ cat > "$STUB_BIN/yt-dlp" <<'STUB'
 # where -o asks (as .webm, so the rename to source.mp4 stays covered), and
 # appends YTDLP_STUB_META (a JSON file) to a --print-to-file target. With
 # YTDLP_STUB_ERROR set it fails the way yt-dlp does: an ERROR: line on stderr,
-# after a warning that is not the reason. Never reads stdin.
+# after a warning that is not the reason. With YTDLP_STUB_OLD set it plays a
+# yt-dlp from before --js-runtimes existed: --help does not list it, and
+# passing it is a usage error (exit 2). Never reads stdin.
 { printf -- '--- call\n'; printf '%s\n' "$@"; } >> "$STUB_LOG/yt-dlp.log"
 if [ "${1:-}" = "--version" ]; then echo "2026.07.04"; exit 0; fi
+if [ "${1:-}" = "--help" ]; then
+    printf 'Usage: yt-dlp [OPTIONS] URL [URL...]\n    --no-playlist\n'
+    [ -n "${YTDLP_STUB_OLD:-}" ] || printf '    --js-runtimes RUNTIME[:PATH]\n'
+    exit 0
+fi
+case " $* " in
+    *" --js-runtimes "*)
+        if [ -n "${YTDLP_STUB_OLD:-}" ]; then
+            printf 'yt-dlp: error: no such option: --js-runtimes\n' >&2
+            exit 2
+        fi ;;
+esac
 if [ -n "${YTDLP_STUB_ERROR:-}" ]; then
     printf 'WARNING: [stub] a warning that is not the reason\n' >&2
     printf 'ERROR: %s\n' "$YTDLP_STUB_ERROR" >&2
@@ -647,6 +661,14 @@ check "without deno, yt-dlp is pointed at node" ytdlp_pair "--js-runtimes" "node
 run_tool node_and_deno "$YT_URL" --output "$WORK/js-deno" --no-contact-sheet --transcript never
 check "with deno, yt-dlp is called" called yt-dlp
 check "...and left on its default runtime" not ytdlp_got "--js-runtimes"
+
+# A yt-dlp older than --js-runtimes (distro packages often are) rejects the
+# flag outright, which would break every yt-dlp path, not just YouTube's.
+export YTDLP_STUB_OLD=1
+run_tool node_no_deno "$YT_URL" --output "$WORK/js-old" --no-contact-sheet --transcript never
+unset YTDLP_STUB_OLD
+assert_eq 0 "$RC" "a yt-dlp too old for --js-runtimes still downloads"
+check "...because it is not given the flag" not ytdlp_got "--js-runtimes"
 
 # --- yt-dlp metadata (plan step 6) --------------------------------------------
 # Without it every YouTube digest was dated today, and its directory said

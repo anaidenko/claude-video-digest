@@ -91,7 +91,9 @@ need() {
 ytdlp_install_hint() {
     case "$(uname -s)" in
         Darwin) printf 'brew install yt-dlp deno' ;;
-        *) printf 'pipx install yt-dlp (or your distro'"'"'s package)' ;;
+        # Not the distro package: those lag far behind, and YouTube breaks
+        # old yt-dlp versions regularly.
+        *) printf 'pipx install yt-dlp' ;;
     esac
 }
 
@@ -486,8 +488,14 @@ ytdlp_download() {
     # YouTube needs a JS runtime, and yt-dlp enables only deno by default.
     # Without one it still downloads, but warns that extraction without one
     # is deprecated and formats may be missing. node is far more common.
+    # ⚠️ Only for a yt-dlp that lists the flag: an older one (distro packages
+    # often are) rejects it as a usage error, which would break every yt-dlp
+    # path. Capture first, then match: see the pipefail trap in CLAUDE.md.
     if ! command -v deno >/dev/null 2>&1 && command -v node >/dev/null 2>&1; then
-        args+=(--js-runtimes node)
+        ytdlp_help="$(yt-dlp --help 2>/dev/null || true)"
+        case "$ytdlp_help" in
+            *--js-runtimes*) args+=(--js-runtimes node) ;;
+        esac
     fi
     # Title and length go to the user before the download starts (yt-dlp's
     # stdout goes to stderr here, where every other note goes). Date and title

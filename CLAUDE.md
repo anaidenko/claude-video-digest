@@ -114,6 +114,34 @@ half-populated directory and an error that names the symptom, not the cause.
   regardless of whether the download was fresh or reused. Verified: `--max-frames 10` then
   `--max-frames 40` on the same cached clip correctly produced 11 then 28 frames, no `--force`
   needed. Recorded here so nobody "fixes" this into the other tool's behaviour by mistake.
+- **`og:video` can name a player page, not a file.** YouTube's points at `/embed/<id>` and
+  Vimeo's at `player.vimeo.com/video/<id>`, both HTML. The Droplr fallback "downloaded" that,
+  and the magic-byte check died blaming an expired link, so YouTube never reached yt-dlp at
+  all, even with yt-dlp installed. YouTube now skips the page fetch entirely, and HTML behind
+  `og:video` hands the original share URL to yt-dlp.
+- **Every `watch?v=` link derived the cache id `watch`** (last path segment, query dropped), so
+  a second video would have silently reused the first one's `source.mp4`. `youtube_id()` gives
+  `yt-<id>` for every link form. No YouTube digest existed on disk before that, so nothing was
+  orphaned. Keep the scheme now that some do.
+- **`--no-playlist` only narrows a link that names both a video and a playlist.** A bare
+  playlist or channel URL would still fetch everything, and derive the shared id `playlist`, so
+  a YouTube link with no video id is refused before anything runs.
+- **A `[height<=720]` format filter assumes landscape.** A vertical Short's 720p is 720x1280,
+  so the filter skipped it and fetched 360x640, a quarter of the sheet's pixel budget. The
+  same trap as the cell budget above. `-S res:720` caps yt-dlp's `res`, which is the smaller
+  side.
+- **A Loom share page's only `.mp4` is a 5-second thumbnail preview**
+  (`cdn.loom.com/sessions/thumbnails/…`). The scrape took it, and a 280-second video digested
+  as 5 seconds with exit 0, while README listed Loom as working "via yt-dlp". `/thumbnail(s)/`
+  URLs are skipped now, so Loom falls through to yt-dlp. Found only by running a real link.
+- **A stale yt-dlp fails on YouTube with `HTTP Error 403: Forbidden` on every format.**
+  2026.07.04 failed two TED talks that way while older videos still downloaded; 2026.10.26
+  fetched them. doctor shows the version, and a 403 gets "update yt-dlp" in the error.
+- **The URL suite works only because `video-digest.sh` never resets `PATH`.** The `curl` and
+  `yt-dlp` stand-ins in `test/run-tests.sh` go first on `PATH`; "yt-dlp is missing" is a PATH
+  of symlinks to just ffmpeg/ffprobe/python3, since Homebrew keeps them all in one bin dir. If
+  the script ever needs a fixed PATH (hooks get a minimal one), move the stubs to an explicit
+  override variable first, or every URL test silently starts hitting the network.
 
 ## Releasing
 
@@ -152,7 +180,8 @@ asks before the push; the tag publishes to npm and creates the GitHub Release th
   reliably drops the tail.
 - **A missing `whisper`/`yt-dlp`/`curl` degrades gracefully** (no transcript / no fallback
   extractor / URL inputs refused) rather than failing the whole run — only `ffmpeg`, `ffprobe`
-  and `python3` are hard requirements, checked up front.
+  and `python3` are hard requirements, checked up front. The exception is a YouTube link, which
+  has no path but yt-dlp: it fails before any directory or fetch when yt-dlp is missing.
 - **Output defaults to the OS temp directory, not the current directory.** Writing untracked
   files into a stranger's project by default would be rude; a persistent location is opt-in via
   `--output` / config, and that's also what `keepSource: auto` keys off.

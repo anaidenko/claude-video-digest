@@ -36,12 +36,17 @@ Inside Claude Code, just ask — the bundled skill runs it for you:
 > watch this: https://d.pr/v/abc123
 >
 > what does the recording in this ticket show?
+>
+> summarise this talk: https://www.youtube.com/watch?v=qzR62JJCMBQ
 
 Or run it directly:
 
 ```bash
 # A share link (Zight, CloudApp, Droplr) or any page with an embedded video
 ./scripts/video-digest.sh https://d.pr/v/abc123
+
+# A YouTube video (needs yt-dlp; see Install)
+./scripts/video-digest.sh "https://www.youtube.com/watch?v=jNQXAC9IVRw"
 
 # A local file
 ./scripts/video-digest.sh ./recording.mp4
@@ -73,6 +78,26 @@ meta.json           what was extracted, and the real recording date
 source.mp4          kept or deleted depending on keepSource
 ```
 
+### Links it has been run against
+
+| Source | Through | Live result |
+| --- | --- | --- |
+| Zight, CloudApp, Droplr | the built-in scraper | works |
+| YouTube: `watch?v=`, `youtu.be/…?si=`, `shorts/` | yt-dlp | works; a `watch` link with `&list=` fetches just that one video |
+| Loom (public share link) | yt-dlp | works |
+| Vimeo | yt-dlp | **fails**: yt-dlp asks for a login |
+
+YouTube and Loom were checked on 2026-11-17 with yt-dlp 2026.10.26 on macOS. The `live/` and
+`embed/` link forms, and the `m.`, `music.` and `youtube-nocookie.com` hosts, are recognised as
+well, but only the offline suite covers them. A playlist or channel link is refused: pass the
+video's own link.
+
+A YouTube digest is dated by the video's upload date and named after its title (`--title` still
+wins). Long videos are digested whole, and a run over 15 minutes says so up front: frames stay
+capped at 30 (one every 3 minutes on a 90-minute talk; `--max-frames` raises that), and the
+transcript takes time. On an Apple M3, a 9½-minute talk took about 1½ minutes end to end,
+Whisper `base` included.
+
 ## Install
 
 ```bash
@@ -96,10 +121,17 @@ available too.
 - `ffmpeg`, `ffprobe` — frame extraction and the contact sheet
 - `python3` — reads the config, writes `meta.json`, groups the transcript
 
-**Optional** (each degrades cleanly rather than failing the run):
+**Optional** (a local file and the share hosts above work without them):
 - `curl` — needed only for a URL input; a local file works without it
 - `whisper` — transcription; missing it means no `transcript.txt`, not an error
-- `yt-dlp` — sites beyond the built-in scraper (Loom, YouTube, Vimeo, hundreds more)
+- `yt-dlp` — **needed for YouTube links**: without it a YouTube link fails at once, before
+  anything is fetched. It also reads Loom, and pages the built-in scraper can't. Keep it
+  current (`brew upgrade yt-dlp`): YouTube breaks older versions, and a `403 Forbidden` on
+  download is a common symptom. Two talks failed that way on every format under 2026.07.04
+  and downloaded fine on 2026.10.26.
+- `deno`, or `node` — the JavaScript runtime yt-dlp needs for YouTube; without one it warns
+  that YouTube extraction is deprecated and some formats may be missing.
+  `brew install yt-dlp deno` covers both (Linux: `pipx install yt-dlp`, plus deno or node).
 
 Run `./scripts/video-digest.sh doctor` to see exactly what's present. **Missing a required
 dependency fails immediately** with an install hint (`brew install ffmpeg` / `apt-get install
@@ -162,7 +194,8 @@ text-only skills; this one ships an executable, so use one of the plugin install
 </details>
 
 **Platforms:** macOS and Linux, both covered by the test suite (`npm test` for macOS's bash 3.2,
-`npm run test:docker` for Debian's bash 5.x — both currently 47-48 assertions, green). Windows
+`npm run test:docker` for Debian's bash 5.x). URL inputs are tested against stand-ins for
+`curl` and `yt-dlp`, so the suite never touches the network. Windows
 untested — expected to work under Docker Desktop / WSL2, but not claimed until someone confirms
 it. A `Dockerfile` is included:
 
@@ -229,7 +262,8 @@ each followed by what the others do instead:
   verified against live links. _Elsewhere:_ both are built entirely on yt-dlp, which doesn't
   know those hosts, so neither can open such a link at all.
 
-For everything yt-dlp *does* support, this falls back to it — so you get both.
+For everything yt-dlp *does* support, this falls back to it — so you get both. YouTube and
+Loom are run through it for real (see [Links it has been run against](#links-it-has-been-run-against)).
 
 ## A note on fetching URLs
 

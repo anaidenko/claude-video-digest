@@ -2,6 +2,45 @@
 
 Notable changes per release. Dates are UTC.
 
+## [Unreleased]
+
+### Added
+
+- **YouTube links work.** `watch?v=`, `youtu.be/`, `shorts/`, `live/` and `embed/` links on
+  `www.`, `m.`, `music.` and `youtube-nocookie.com` go straight to yt-dlp. Before, they never
+  reached it at all. Each video gets its own cache id, `yt-<id>`; `&t=`, `&list=` and `?si=`
+  don't change it. A playlist or channel link is refused rather than fetched whole. Without
+  yt-dlp, a YouTube link fails before anything is fetched and names the install command
+  (`brew install yt-dlp deno` / `pipx install yt-dlp`).
+- **Digests from yt-dlp are dated and named by the video.** `recorded` is the upload date
+  (`yt-dlp-upload-date`, no longer today), `meta.json` gains a `title`, and the title names the
+  directory when `--title` is not given. A cache hit keeps both.
+- **A video over 15 minutes is flagged up front**: the frames will be sparse (at most 30) and a
+  transcript slow. It is still digested whole.
+- **doctor** shows the yt-dlp version and which JavaScript runtime yt-dlp will get for YouTube
+  (deno, else node). The npx installer says when YouTube links will need yt-dlp.
+
+### Fixed
+
+- **Every `watch?v=` link derived the cache id `watch`**, so a second YouTube video would have
+  reused the first one's download. No YouTube digest could exist yet, so no cache is affected.
+- **An `og:video` tag naming a player page** (YouTube's `/embed/`, Vimeo's player) died with
+  "the link returned an HTML page … may have expired or need login". The share link now goes to
+  yt-dlp, and if that fails too, the error names both causes.
+- **A public Loom link digested a 5-second thumbnail preview with exit 0.** The page's only
+  `.mp4` is that preview. Thumbnail URLs are skipped now, and Loom goes through yt-dlp.
+- **Vertical videos downloaded at 360p**: the 720p cap assumed landscape. It now caps the
+  shorter side, so a Short comes down at 720x1280.
+- **yt-dlp failures say why.** The error carries yt-dlp's own reason (a sign-in or bot check, a
+  private or removed video, a login wall), and a `403 Forbidden` adds "update yt-dlp" with the
+  installed version.
+
+### Changed
+
+- Every yt-dlp call passes `--no-playlist`, `-S res:720` and `--no-update`, plus
+  `--js-runtimes node` when deno is missing and node is not.
+- README no longer lists Vimeo as working, and lists Loom only now that it has been run.
+
 ## [1.2.0] — 2026-11-16
 
 ### Added

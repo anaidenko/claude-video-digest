@@ -12,6 +12,12 @@ plus individual frames, and transcribes the audio when there is any.
 Droplr, ...) produce links that are viewable without logging in. Fetch them directly; don't ask
 the user for screenshots as a first move.
 
+**YouTube links are first-class**: `watch?v=`, `youtu.be/`, `shorts/`, `live/`, `embed/`. Pass
+the link as given, `&t=`, `&list=` or `?si=` included; only that one video is fetched. They
+need `yt-dlp`, and without it the script stops before doing anything and names the install
+command. Pass that on rather than looking for another way in. A playlist or channel link is
+refused: ask for the video's own link.
+
 ## Run it
 
 ```
@@ -76,7 +82,17 @@ downscale hides a detail.
   transcription below a threshold. The summary line says which happened.
 - **The recording date is not necessarily today, or the date it was shared.** `meta.json`
   carries `recorded` and `recorded_source` — check them before assuming a recording reflects
-  the current state of anything.
+  the current state of anything. For YouTube and Loom it is the upload date
+  (`yt-dlp-upload-date`), and `meta.json` carries the video's `title`.
+- **Long videos take minutes, not seconds.** A talk is downloaded whole and transcribed
+  whole: a 9½-minute one took about 1½ minutes end to end. Over 15 minutes the script says so
+  up front. Give the command a timeout to match, or run it in the background, rather than
+  letting a default tool timeout kill it halfway. The frames stay capped at 30, so on a long
+  talk the sheet is an overview; lean on the transcript, and raise `--max-frames` when a
+  stretch needs a closer look.
+- **When yt-dlp fails, the error carries its reason**: a sign-in or bot check, a private or
+  removed video, a login wall (Vimeo). A `403 Forbidden` comes with advice to update yt-dlp,
+  which is what fixed it when this was tested live. Relay the reason to the user; retrying the same command will not change it.
 - **`archived/` (inside a persistent output dir) is the user's.** A recording moved there is
   resolved; the tool refuses to re-process it without `--force`. Don't move things in or out on
   the user's behalf.
@@ -107,7 +123,9 @@ Output: [<run-dir>](file:///path/to/&lt;run-dir&gt;)
 ## Dependencies
 
 `ffmpeg` (with `libfreetype` for timestamps), `ffprobe` and `python3` are required and checked
-up front. `curl` is needed only for a URL input, `whisper` only when the audio carries speech,
-`yt-dlp` only for sites the built-in scraper can't resolve — all three degrade gracefully
-without failing the run. See `"${CLAUDE_PLUGIN_ROOT}/scripts/video-digest.sh" doctor` for
-what's currently available.
+up front. `curl` is needed only for a URL input, and `whisper` only when the audio carries
+speech; both degrade gracefully without failing the run. `yt-dlp` reads YouTube, Loom and
+pages the built-in scraper can't. A YouTube link has no other way in, so without yt-dlp it
+fails up front. yt-dlp uses `deno` or `node` as its JavaScript runtime for YouTube. See
+`"${CLAUDE_PLUGIN_ROOT}/scripts/video-digest.sh" doctor` for what's currently available,
+including the yt-dlp version.

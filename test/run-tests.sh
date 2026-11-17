@@ -380,6 +380,10 @@ case "$url" in
         printf '<html><head><meta property="og:video:url" content="https://player.fixture.test/video/76979871?h=8c4e"></head></html>\n' > "$out" ;;
     https://share.fixture.test/novideo/*)
         printf '<html><body>no video here</body></html>\n' > "$out" ;;
+    https://share.fixture.test/thumbonly/*)
+        printf '<html><body><video autoplay muted src="https://cdn.fixture.test/sessions/thumbnails/abc-00001.mp4"></video></body></html>\n' > "$out" ;;
+    https://share.fixture.test/thumbfirst/*)
+        printf '<html><body><video src="https://cdn.fixture.test/sessions/thumbnails/abc-00001.mp4"></video><a href="https://cdn.fixture.test/files/2025-06-07-real.mp4">download</a></body></html>\n' > "$out" ;;
     *youtube.com/* | *youtu.be/* | *youtube-nocookie.com/*)
         printf '<html><head><meta property="og:video:url" content="https://www.youtube.com/embed/jNQXAC9IVRw"></head></html>\n' > "$out" ;;
     *)
@@ -498,6 +502,20 @@ assert_eq scrape "$(meta_field "$WORK/url-zight" extractor)" "...through the scr
 check "...served by the curl stub, not the network" called curl
 check "...without calling yt-dlp" not called yt-dlp
 assert_eq 2025-03-04 "$(meta_field "$WORK/url-zight" recorded)" "...dated by its CDN filename"
+
+# A Loom share page carries one .mp4: cdn.loom.com/sessions/thumbnails/<id>-
+# 00001.mp4, a 5-second silent preview. The scrape took it and digested the
+# preview of a 280-second video with exit 0 (verified live). A thumbnail is
+# never the video.
+run_tool with_stubs "https://share.fixture.test/thumbonly/abc" --output "$WORK/url-thumb" --no-contact-sheet --transcript never
+assert_eq 0 "$RC" "a page whose only .mp4 is a thumbnail digests"
+check "...through yt-dlp, not the thumbnail" ytdlp_got "https://share.fixture.test/thumbonly/abc"
+assert_eq yt-dlp "$(meta_field "$WORK/url-thumb" extractor)" "...and says so"
+run_tool without_ytdlp "https://share.fixture.test/thumbonly/abc" --output "$WORK/url-thumb-noyt" --no-contact-sheet --transcript never
+assert_eq 1 "$RC" "...without yt-dlp it fails rather than digest the thumbnail"
+run_tool with_stubs "https://share.fixture.test/thumbfirst/abc" --output "$WORK/url-thumbfirst" --no-contact-sheet --transcript never
+assert_eq "https://cdn.fixture.test/files/2025-06-07-real.mp4" "$(meta_field "$WORK/url-thumbfirst" resolved_url)" \
+    "a thumbnail listed before the real file is passed over"
 
 YT=jNQXAC9IVRw
 YT_URL="https://www.youtube.com/watch?v=$YT"

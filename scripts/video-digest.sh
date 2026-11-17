@@ -594,11 +594,17 @@ else
 
         CDN_URL=""
         if [ "$fetched" -eq 1 ]; then
+            # ⚠️ A thumbnail is never the video. Loom's share page carries a
+            # single .mp4, cdn.loom.com/sessions/thumbnails/<id>-00001.mp4: a
+            # 5-second silent preview, which was digested with exit 0 in place
+            # of the 280-second video (verified live). Without it the page has
+            # no video and falls through to yt-dlp, which reads Loom properly.
+            mp4_urls="$(command grep -oE 'https?://[^"'"'"']+\.mp4[^"'"'"']*' "$page" \
+                | command grep -viE '/thumbnails?/' || true)"
             # 1. The viewer variant (Zight-family) is the plain playable file.
-            CDN_URL="$(command grep -oE 'https?://[^"'"'"']+\.mp4[^"'"'"']*' "$page" \
-                | command grep 'source=viewer' | head -1 || true)"
+            CDN_URL="$(printf '%s\n' "$mp4_urls" | command grep 'source=viewer' | head -1 || true)"
             # 2. Any URL on the page that ends in a video extension.
-            [ -n "$CDN_URL" ] || CDN_URL="$(command grep -oE 'https?://[^"'"'"']+\.mp4[^"'"'"']*' "$page" | head -1 || true)"
+            [ -n "$CDN_URL" ] || CDN_URL="$(printf '%s\n' "$mp4_urls" | head -1 || true)"
             # 3. og:video / twitter:player meta tags. ⚠️ Load-bearing for hosts
             # whose CDN URL carries NO file extension — Droplr serves
             # `cdn-std.droplr.net/files/acc_NNN/<id>` (verified: 200,

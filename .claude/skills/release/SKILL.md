@@ -186,3 +186,13 @@ commit early: it goes out together with its tag in step 6.
    and only the CI publish of `X.Y.Z` stops it. If that run fails, fix it and
    re-run within the same window. Otherwise re-create the trusted publisher
    first.
+6. **When reporting, tell the user to release again on a later UTC day**,
+   even if only a patch. npm's search index takes the download count once per
+   publish, and the downloads API counts a day only after it ends (UTC). A
+   package published only on its first day therefore keeps a count of 0, and
+   search leaves it out even for its exact name. Waiting does not help; a new
+   publish does. Check with
+   `curl -s 'https://registry.npmjs.org/-/v1/search?text=maintainer:anaidenko'`:
+   if the package's `downloads` reads 0, it is still unlisted. For the full
+   story, see `anaidenko/claude-plugins` CONTRIBUTING → Being found in npm
+   search.

@@ -41,6 +41,24 @@ Notable changes per release. Dates are UTC.
   `--js-runtimes node` when deno is missing and node is not.
 - README no longer lists Vimeo as working, and lists Loom only now that it has been run.
 
+### Verified live
+
+2026-11-17, macOS (Apple M3), yt-dlp 2026.10.26, against the final code:
+
+| Link | Result |
+| --- | --- |
+| `youtube.com/watch?v=jNQXAC9IVRw` | 19 s, 11 frames, transcript, dated 2005-04-24, 8 s |
+| `youtu.be/jNQXAC9IVRw?si=…` | the same video, 7 s |
+| `youtube.com/shorts/bkSNwyl7iHE` | 38 s at 720x1280, 11 frames, transcript, 13 s |
+| `watch?v=Jt5fgKBqZSY&list=UU…&index=2` | only that 32 s video was fetched, 10 s |
+| `watch?v=qzR62JJCMBQ` (9:24 TED talk) | 31 frames, transcript grouped across all of them, 83 s end to end |
+| `watch?v=aaaaaaaaaaa` (no such video) | fails: "[youtube] aaaaaaaaaaa: This video is unavailable" |
+| `vimeo.com/76979871` | fails: "The web client only works when logged-in" |
+| `loom.com/share/2bff5385…` | 280.7 s, 31 frames, transcript, dated 2022-06-22, 57 s |
+
+Under yt-dlp 2026.07.04 the TED talk, and a second one, failed with `HTTP Error 403` on every
+format, while the older videos above downloaded.
+
 ## [1.2.0] — 2026-11-16
 
 ### Added

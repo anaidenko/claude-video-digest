@@ -531,6 +531,17 @@ run_tool with_stubs "https://share.fixture.test/thumbfirst/abc" --output "$WORK/
 assert_eq "https://cdn.fixture.test/files/2025-06-07-real.mp4" "$(meta_field "$WORK/url-thumbfirst" resolved_url)" \
     "a thumbnail listed before the real file is passed over"
 
+# A persistent --output may hold a thumbnail an earlier version cached as
+# source.mp4. Reused, it would keep digesting the preview, exit 0, forever.
+mkdir -p "$WORK/thumbcache/videos/2026-01-01-abc"
+cp "$WORK/moving.mp4" "$WORK/thumbcache/videos/2026-01-01-abc/source.mp4"
+printf '{"id": "abc", "resolved_url": "https://cdn.fixture.test/sessions/thumbnails/abc-00001.mp4", "extractor": "scrape"}\n' \
+    > "$WORK/thumbcache/videos/2026-01-01-abc/meta.json"
+run_tool with_stubs "https://share.fixture.test/thumbonly/abc" --output "$WORK/thumbcache" --no-contact-sheet --transcript never
+assert_eq 0 "$RC" "a cached thumbnail from an older version is replaced"
+check "...not reused" not said "reusing cached download"
+check "...but fetched again through yt-dlp" ytdlp_got "https://share.fixture.test/thumbonly/abc"
+
 YT=jNQXAC9IVRw
 YT_URL="https://www.youtube.com/watch?v=$YT"
 OTHER_URL="https://www.youtube.com/watch?v=dQw4w9WgXcQ"

@@ -590,7 +590,17 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [ -n "$TARGET_DIR" ] && [ -f "$TARGET_DIR/source.mp4" ] && [ "$FORCE" -eq 0 ]; then
+# Versions before the thumbnail fix (see the scrape below) cached Loom's
+# 5-second preview as source.mp4; reused, it would be digested again and
+# again, exit 0. Such a cache is fetched afresh instead.
+CACHED_THUMBNAIL=0
+if [ -n "$TARGET_DIR" ] && [ -f "$TARGET_DIR/meta.json" ] \
+    && command grep -qE '"resolved_url": "[^"]*/thumbnails?/' "$TARGET_DIR/meta.json"; then
+    CACHED_THUMBNAIL=1
+    note "the cached download is a thumbnail clip, not the video — fetching it again"
+fi
+
+if [ -n "$TARGET_DIR" ] && [ -f "$TARGET_DIR/source.mp4" ] && [ "$FORCE" -eq 0 ] && [ "$CACHED_THUMBNAIL" -eq 0 ]; then
     SOURCE_MP4="$TARGET_DIR/source.mp4"
     note "reusing cached download: $TARGET_DIR"
     # Nothing is downloaded, so what the download once said (an upload date,

@@ -15,8 +15,9 @@ Notable changes per release. Dates are UTC.
 - **Digests from yt-dlp are dated and named by the video.** `recorded` is the upload date
   (`yt-dlp-upload-date`, no longer today), `meta.json` gains a `title`, and the title names the
   directory when `--title` is not given. A cache hit keeps both.
-- **A video over 15 minutes is flagged up front**: the frames will be sparse (at most 30) and a
-  transcript slow. It is still digested whole.
+- **A video over 15 minutes is flagged** once downloaded, before frame extraction and
+  transcription: the frames will be sparse (at most 30) and a transcript slow. It is still
+  digested whole.
 - **doctor** shows the yt-dlp version and which JavaScript runtime yt-dlp will get for YouTube
   (deno, else node). The npx installer says when YouTube links will need yt-dlp.
 
@@ -28,7 +29,12 @@ Notable changes per release. Dates are UTC.
   "the link returned an HTML page … may have expired or need login". The share link now goes to
   yt-dlp, and if that fails too, the error names both causes.
 - **A public Loom link digested a 5-second thumbnail preview with exit 0.** The page's only
-  `.mp4` is that preview. Thumbnail URLs are skipped now, and Loom goes through yt-dlp.
+  `.mp4` is that preview. Thumbnail URLs are skipped now, and Loom goes through yt-dlp. A
+  persistent `--output` that already cached such a preview fetches the video again.
+- **A title word could pull in another recording's cache.** The lookup matched `*-<id>-*`, so
+  a local `demo.mp4` reused a YouTube digest titled "Product Demo Video". A match now has to
+  carry the same id in its `meta.json`.
+- **A `--title` label is no longer renamed away** by a later run without `--title`.
 - **Vertical videos downloaded at 360p**: the 720p cap assumed landscape. It now caps the
   shorter side, so a Short comes down at 720x1280.
 - **yt-dlp failures say why.** The error carries yt-dlp's own reason (a sign-in or bot check, a
@@ -38,7 +44,8 @@ Notable changes per release. Dates are UTC.
 ### Changed
 
 - Every yt-dlp call passes `--no-playlist`, `-S res:720` and `--no-update`, plus
-  `--js-runtimes node` when deno is missing and node is not.
+  `--js-runtimes node` when deno is missing, node is not, and the installed yt-dlp lists the
+  flag (an older one rejects it outright).
 - README no longer lists Vimeo as working, and lists Loom only now that it has been run.
 
 ### Verified live
@@ -49,15 +56,17 @@ Notable changes per release. Dates are UTC.
 | --- | --- |
 | `youtube.com/watch?v=jNQXAC9IVRw` | 19 s, 11 frames, transcript, dated 2005-04-24, 8 s |
 | `youtu.be/jNQXAC9IVRw?si=…` | the same video, 7 s |
-| `youtube.com/shorts/bkSNwyl7iHE` | 38 s at 720x1280, 11 frames, transcript, 13 s |
-| `watch?v=Jt5fgKBqZSY&list=UU…&index=2` | only that 32 s video was fetched, 10 s |
-| `watch?v=qzR62JJCMBQ` (9:24 TED talk) | 31 frames, transcript grouped across all of them, 83 s end to end |
+| `youtube.com/shorts/bkSNwyl7iHE` | 38 s at 720x1280, 11 frames, transcript, 11 s |
+| `watch?v=Jt5fgKBqZSY&list=UU…&index=2` | only that 32 s video was fetched, 11 s |
+| `watch?v=qzR62JJCMBQ` (9:24 TED talk) | 31 frames, transcript grouped across all of them, 82 s end to end |
 | `watch?v=aaaaaaaaaaa` (no such video) | fails: "[youtube] aaaaaaaaaaa: This video is unavailable" |
 | `vimeo.com/76979871` | fails: "The web client only works when logged-in" |
-| `loom.com/share/2bff5385…` | 280.7 s, 31 frames, transcript, dated 2022-06-22, 57 s |
+| `loom.com/share/2bff5385…` | 280.7 s, 31 frames, transcript, dated 2022-06-22, 42 s |
 
 Under yt-dlp 2026.07.04 the TED talk, and a second one, failed with `HTTP Error 403` on every
-format, while the older videos above downloaded.
+format, while the older videos above downloaded. Also checked live: with no deno on PATH,
+yt-dlp 2026.10.26 is handed node and digests; a persistent `--output` that had cached Loom's
+5-second preview fetched the full video again.
 
 ## [1.2.0] — 2026-11-16
 

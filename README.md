@@ -93,7 +93,8 @@ well, but only the offline suite covers them. A playlist or channel link is refu
 video's own link.
 
 A YouTube digest is dated by the video's upload date and named after its title (`--title` still
-wins). Long videos are digested whole, and a run over 15 minutes says so up front: frames stay
+wins). Long videos are digested whole. Over 15 minutes a run says so once the download is done,
+before frame extraction and transcription, the slow part: frames stay
 capped at 30 (one every 3 minutes on a 90-minute talk; `--max-frames` raises that), and the
 transcript takes time. On an Apple M3, a 9½-minute talk took about 1½ minutes end to end,
 Whisper `base` included.
@@ -121,7 +122,7 @@ available too.
 - `ffmpeg`, `ffprobe` — frame extraction and the contact sheet
 - `python3` — reads the config, writes `meta.json`, groups the transcript
 
-**Optional** (a local file and the share hosts above work without them):
+**Optional** (a local file needs none of them):
 - `curl` — needed only for a URL input; a local file works without it
 - `whisper` — transcription; missing it means no `transcript.txt`, not an error
 - `yt-dlp` — **needed for YouTube links**: without it a YouTube link fails at once, before

@@ -86,7 +86,7 @@ downscale hides a detail.
   (`yt-dlp-upload-date`), and `meta.json` carries the video's `title`.
 - **Long videos take minutes, not seconds.** A talk is downloaded whole and transcribed
   whole: a 9½-minute one took about 1½ minutes end to end. Over 15 minutes the script says so
-  up front. Give the command a timeout to match, or run it in the background, rather than
+  once the download is done, before the slow part. Give the command a timeout to match, or run it in the background, rather than
   letting a default tool timeout kill it halfway. The frames stay capped at 30, so on a long
   talk the sheet is an overview; lean on the transcript, and raise `--max-frames` when a
   stretch needs a closer look.

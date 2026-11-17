@@ -137,6 +137,14 @@ half-populated directory and an error that names the symptom, not the cause.
 - **A stale yt-dlp fails on YouTube with `HTTP Error 403: Forbidden` on every format.**
   2026.07.04 failed two TED talks that way while older videos still downloaded; 2026.10.26
   fetched them. doctor shows the version, and a 403 gets "update yt-dlp" in the error.
+- **The cache lookup's glob is not proof of identity.** `find_dir` matches `*-<id>-*`, and
+  once yt-dlp titles named directories, a YouTube digest titled "Product Demo Video" matched a
+  local `demo.mp4` and was reused as its cache, exit 0. A hit whose `meta.json` names another
+  id is dropped. A video's title names only a NEW directory: on a cache hit the restored
+  title is usually longer than a `--title` label, and the "enrich a shorter name" rename
+  would erase the label.
+- **`--js-runtimes` is new, and an older yt-dlp rejects it as a usage error**, which breaks
+  every yt-dlp path, not just YouTube's. It is passed only when `yt-dlp --help` lists it.
 - **The URL suite works only because `video-digest.sh` never resets `PATH`.** The `curl` and
   `yt-dlp` stand-ins in `test/run-tests.sh` go first on `PATH`; "yt-dlp is missing" is a PATH
   of symlinks to just ffmpeg/ffprobe/python3, since Homebrew keeps them all in one bin dir. If

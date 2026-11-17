@@ -600,7 +600,11 @@ printf '\nyt-dlp invocation\n'
 for url in "$YT_URL&list=$PLAYLIST" "https://share.fixture.test/player/abc" "https://share.fixture.test/novideo/x"; do
     run_tool with_stubs "$url" --output "$WORK/yt-flags" --no-contact-sheet --transcript never
     check "only the one video, even with &list=: $url" ytdlp_got "--no-playlist"
-    check "...capped at 720p" ytdlp_pair "-f" "bv*[height<=720]+ba/b[height<=720]/b"
+    # res is yt-dlp's SMALLER dimension. A [height<=720] filter assumes
+    # landscape: on a vertical Short (720x1280) it skipped 720p and fetched
+    # 360x640, a quarter of the sheet's pixel budget (verified live).
+    check "...capped at 720p on the short side" ytdlp_pair "-S" "res:720"
+    check "...with no height filter that assumes landscape" not grep -q 'height<=' "$STUB_LOG/yt-dlp.log"
     check "...without a self-update" ytdlp_got "--no-update"
 done
 

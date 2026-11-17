@@ -458,10 +458,12 @@ YTDLP_ERROR=""
 ytdlp_download() {
     local url="$1" err="$TMP_DL/yt-dlp.stderr" found args
     # --no-playlist: given a link naming both a video and a playlist (&list=),
-    # yt-dlp's default is the WHOLE playlist. The format cap: the sheet's cells
-    # are budgeted at 480k px, so anything above 720p is bandwidth spent on
-    # detail the sheet throws away.
-    args=(--no-update --no-playlist --no-progress -f 'bv*[height<=720]+ba/b[height<=720]/b')
+    # yt-dlp's default is the WHOLE playlist. The resolution cap: the sheet's
+    # cells are budgeted at 480k px, so anything above 720p is bandwidth spent
+    # on detail the sheet throws away. ⚠️ res is the SMALLER dimension; a
+    # [height<=720] filter assumes landscape, and on a vertical Short
+    # (720x1280) it skipped 720p and fetched 360x640 (verified live).
+    args=(--no-update --no-playlist --no-progress -S 'res:720')
     # YouTube needs a JS runtime, and yt-dlp enables only deno by default.
     # Without one it still downloads, but warns that extraction without one
     # is deprecated and formats may be missing. node is far more common.

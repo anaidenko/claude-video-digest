@@ -483,6 +483,13 @@ ytdlp_download() {
         YTDLP_ERROR="$(command grep '^ERROR:' "$err" | tail -1 | sed 's/^ERROR: *//' || true)"
         [ -n "$YTDLP_ERROR" ] || YTDLP_ERROR="$(tail -1 "$err" 2>/dev/null || true)"
         [ -n "$YTDLP_ERROR" ] || YTDLP_ERROR="no reason given"
+        # YouTube regularly breaks older yt-dlp versions, and a bare 403 reads
+        # like an access problem. Two talks failed this way on every format
+        # under 2026.07.04 and downloaded fine on 2026.10.26 (verified live).
+        case "$YTDLP_ERROR" in
+            *"HTTP Error 403"*)
+                YTDLP_ERROR="$YTDLP_ERROR — an outdated yt-dlp is a common cause: update yt-dlp (installed: $(yt-dlp --version 2>/dev/null || echo unknown)) and retry" ;;
+        esac
         return 1
     fi
     found="$(find "$TMP_DL" -maxdepth 1 -name 'source.*' -type f | head -1)"

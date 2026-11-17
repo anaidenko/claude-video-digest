@@ -631,6 +631,16 @@ run_tool with_stubs "$YT_URL" --output "$WORK/yt-fail" --no-contact-sheet --tran
 unset YTDLP_STUB_ERROR
 assert_eq 1 "$RC" "a failing yt-dlp fails the run"
 check "...and the error carries yt-dlp's reason" said "^video-digest: .*Sign in to confirm"
+check "...with no update advice where staleness is not the cause" not said "update yt-dlp"
+
+# Two TED talks failed with this on every format under yt-dlp 2026.07.04 and
+# downloaded fine after the upgrade to 2026.10.26 (verified live). A bare
+# "403 Forbidden" reads like an access problem, not a stale tool.
+export YTDLP_STUB_ERROR="unable to download video data: HTTP Error 403: Forbidden"
+run_tool with_stubs "$YT_URL" --output "$WORK/yt-403" --no-contact-sheet --transcript never
+unset YTDLP_STUB_ERROR
+check "a 403 from yt-dlp suggests updating it" said "^video-digest: .*HTTP Error 403.*update yt-dlp"
+check "...and names the version installed" said "^video-digest: .*2026\.07\.04"
 
 run_tool node_no_deno "$YT_URL" --output "$WORK/js-node" --no-contact-sheet --transcript never
 check "without deno, yt-dlp is pointed at node" ytdlp_pair "--js-runtimes" "node"
